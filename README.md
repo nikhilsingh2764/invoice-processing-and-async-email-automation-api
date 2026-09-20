@@ -134,6 +134,92 @@ All queues use 3 attempts with exponential backoff (5 s base delay) and keep the
 
 ---
 
+## 🗄️ Data Model
+
+Every business object belongs to a `USER`, and every repository query is scoped by that user's ID. Invoices keep a **snapshot** of the business and customer at creation time, and each invoice item copies the product's name, price, tax and discount, so historical invoices never change when a profile or product is edited.
+
+```mermaid
+erDiagram
+    USER ||--o| BUSINESS : "owns one"
+    USER ||--o{ CUSTOMER : manages
+    USER ||--o{ PRODUCT : manages
+    USER ||--o{ INVOICE : creates
+    USER ||--o{ REFRESHTOKEN : sessions
+    CUSTOMER ||--o{ INVOICE : "billed on"
+    INVOICE ||--|{ INVOICE_ITEM : contains
+    PRODUCT ||--o{ INVOICE_ITEM : "sold as"
+
+    USER {
+        string username
+        string email
+        string password
+        boolean isVerified
+        boolean isActive
+        int failedLoginAttempts
+        date lockUntil
+    }
+
+    BUSINESS {
+        objectId userId
+        string businessName
+        string ownerName
+        string currency
+        string invoicePrefix
+        int invoiceStartNumber
+        address address
+    }
+
+    REFRESHTOKEN {
+        objectId userId
+        string token
+        date expiresAt
+    }
+
+    CUSTOMER {
+        objectId userId
+        string customerName
+        string email
+        string customerType
+        address billingAddress
+        address shippingAddress
+    }
+
+    PRODUCT {
+        objectId userId
+        string productName
+        string category
+        string unit
+        number price
+        number taxRate
+        number discount
+    }
+
+    INVOICE {
+        objectId userId
+        objectId customerId
+        object businessSnapshot
+        object customerSnapshot
+        string invoiceNumber
+        number subTotal
+        number totalTax
+        number grandTotal
+        date dueDate
+        string status
+        string paymentMethod
+    }
+
+    INVOICE_ITEM {
+        objectId productId
+        string productName
+        number price
+        number quantity
+        number taxRate
+        number discount
+    }
+```
+
+---
+
 ## 🗺️ Route Flow (all endpoints)
 
 A single end-to-end journey through every route, in the order a real client actually calls them — sign up, verify, log in, set up the business, create an invoice, and get it to the customer. Every step also carries its rate limiter and, where it matters, its Redis/BullMQ behavior, so you can narrate `signup → verify-otp → login` or `create invoice → pdf → email` straight off this diagram.
@@ -341,6 +427,56 @@ Dashboard query parameters: `page`, `limit`, `search`, `paymentStatus`, `custome
 | **Input validation** | express-validator rules on every write endpoint |
 | **Errors** | One central error handler returns clean JSON to clients while stack traces go to logs and Sentry |
 
+### Authentication flow
+
+The four steps a client goes through: **signup → verify OTP → login → refresh token**. Every protected route afterwards is checked by `authMiddleware`, and every database query is scoped to `req.user._id`.
+
+```mermaid
+flowchart TD
+    Client(["📱 Client"])
+    Client -->|"1 . credentials"| Signup["POST /signup"]
+    Client -->|"2 . OTP"| VerifyOtp["POST /verify-otp"]
+    Client -->|"3 . credentials"| Login["POST /login"]
+    Client -->|"4 . expired access token"| Refresh["POST /refresh-token"]
+
+    %% 1. Signup
+    Signup --> Hash["bcrypt hash password<br/>create unverified user"]
+    Hash --> GenOtp["Generate 6-digit OTP<br/>store in Redis, 5 min TTL"]
+    GenOtp --> QueueOtp["Queue OTP email job → Brevo"]
+
+    %% 2. Verify OTP
+    VerifyOtp --> OtpValid{"OTP valid<br/>and not expired?"}
+    OtpValid -->|No| OtpRejected(["400 rejected"])
+    OtpValid -->|Yes| MarkVerified["Mark user verified"]
+
+    %% 3. Login
+    Login --> IsLocked{"Locked?<br/>5 failed logins → 15 min lock"}
+    IsLocked -->|Yes| LoginLocked(["403 locked"])
+    IsLocked -->|No| Compare["bcrypt compare password"]
+    Compare -->|Fail| Increment["Increment failed-attempt<br/>counter"]
+    Increment --> LoginInvalid(["401 invalid"])
+    Compare -->|Match| Issuance
+
+    %% 4. Refresh
+    Refresh --> ValidateRefresh["Validate refresh token<br/>against DB record<br/>issue new access + refresh token<br/>old refresh token is revoked"]
+    ValidateRefresh --> Issuance
+
+    subgraph Issuance["Token issuance"]
+        direction TB
+        Access["Access token<br/>JWT · 15 min · HttpOnly Secure cookie"]
+        RefreshToken["Refresh token<br/>JWT · 15 days · HttpOnly Secure cookie<br/>+ stored server-side in MongoDB"]
+    end
+
+    Issuance --> AuthMw["Every protected route<br/>🔒 authMiddleware verifies<br/>access-token cookie"]
+    AuthMw --> RateLimit["Redis-backed rate limiter per route:<br/>login, signup, OTP, password reset,<br/>token refresh, every<br/>business/customer/product/invoice write"]
+    AuthMw --> Scoped["Every DB query scoped to<br/>authMiddleware's req.user._id"]
+
+    classDef error fill:#DC382D,stroke:#333,color:#fff
+    classDef success fill:#16A34A,stroke:#333,color:#fff
+    class OtpRejected,LoginLocked,LoginInvalid error
+    class MarkVerified,Issuance success
+```
+
 ---
 
 ## ⚡ Caching Strategy
@@ -437,14 +573,41 @@ Use long, random values for the token secrets and never commit your `.env` file.
 
 ## 🔄 CI/CD
 
-Every push and pull request to `main` runs the pipeline in [`.github/workflows/ci.yml`](.github/workflows/ci.yml):
+Every push and pull request to `main` runs the pipeline in [`.github/workflows/ci.yml`](.github/workflows/ci.yml). A push to `main` also triggers a Render deploy and verifies the live API. The right-hand side of the diagram shows the Docker Compose stack used for local and self-hosted runs.
 
-```text
-Checkout → Set up Node 20 → npm ci → Build Docker image → Validate docker compose config
-                                                 │
-                                   (push to main only)
-                                                 ▼
-                       Trigger Render deploy hook → Wait → Health check on the live API
+```mermaid
+flowchart LR
+    Push(["👨‍💻 git push to main"]) --> GHA["GitHub Actions<br/>Invoice API CI"]
+
+    subgraph CI["CI pipeline"]
+        direction TB
+        Checkout["Checkout code"] --> Setup["Setup Node.js 20 · npm ci"]
+        Setup --> Build["Build Docker image"]
+        Build --> Inspect["Inspect image"]
+        Inspect --> Validate["docker compose config<br/>validate compose file"]
+    end
+
+    GHA --> Checkout
+    Validate -->|push to main only| Deploy["Trigger Render<br/>deploy hook"]
+    Deploy --> Wait["Wait ~60s for rollout"]
+    Wait --> Health["curl --fail<br/>/api/v1/health"]
+    Health -->|200| Live(["✅ Live on Render"])
+    Health -->|fail| Failed(["❌ Pipeline fails"])
+
+    subgraph Compose["docker-compose.yml — local & self-hosted stack"]
+        direction TB
+        Grafana["grafana/grafana"] -->|dashboards| Prom["prom/prometheus"]
+        Prom -.->|scrapes /metrics| Api["api<br/>Node 20 / Express 5"]
+        Api --> Redis[("redis:7-alpine")]
+        Api --> Mongo[("mongo:8")]
+    end
+
+    Live -.-> Grafana
+
+    classDef ok fill:#16A34A,stroke:#333,color:#fff
+    classDef bad fill:#DC2626,stroke:#333,color:#fff
+    class Live ok
+    class Failed bad
 ```
 
 The pipeline fails if the image does not build or if the deployed API does not answer its health endpoint.
