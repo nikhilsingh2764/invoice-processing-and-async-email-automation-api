@@ -1,0 +1,56 @@
+name: Invoice API CI
+
+on:
+  push:
+    branches:
+      - main
+
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: Backend
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: Backend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Docker image
+        run: docker build -t invoice-api .
+
+      - name: Check Docker image
+        run: docker image inspect invoice-api
+
+      - name: Create CI environment file
+        run: touch .env
+
+      - name: Check Docker Compose
+        run: docker compose config
+
+      - name: Deploy to Render
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        run: curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK }}"
+
+      - name: Wait for deployment
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        run: sleep 60
+
+      - name: Health check
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        run: curl --fail https://invoice-backend-drqr.onrender.com/api/v1/health

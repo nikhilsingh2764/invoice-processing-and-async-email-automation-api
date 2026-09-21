@@ -1,0 +1,157 @@
+
+{
+    "COMMON": {
+        "SUCCESS": "ऑपरेशन सफल रहा",
+        "CREATED": "सफलतापूर्वक बनाया गया",
+        "UPDATED": "सफलतापूर्वक अपडेट किया गया",
+        "DELETED": "सफलतापूर्वक हटाया गया",
+        "NOT_FOUND": "संसाधन नहीं मिला",
+        "INVALID_REQUEST": "अमान्य अनुरोध",
+        "INTERNAL_ERROR": "आंतरिक सर्वर त्रुटि",
+        "DASHBOARD_FETCHED": "डैशबोर्ड सफलतापूर्वक प्राप्त किया गया"
+    },
+
+    "AUTH": {
+        "USER_NOT_FOUND": "उपयोगकर्ता नहीं मिला",
+        "USER_ALREADY_EXISTS": "उपयोगकर्ता पहले से मौजूद है",
+        "EMAIL_ALREADY_EXISTS": "ईमेल पहले से मौजूद है",
+        "USERNAME_ALREADY_EXISTS": "यूज़रनेम पहले से मौजूद है",
+
+        "EMAIL_REQUIRED": "ईमेल आवश्यक है",
+        "PASSWORD_REQUIRED": "पासवर्ड आवश्यक है",
+        "INVALID_EMAIL": "अमान्य ईमेल पता",
+        "INVALID_PASSWORD": "अमान्य पासवर्ड",
+        "INVALID_CREDENTIALS": "ईमेल या पासवर्ड गलत है",
+        "PASSWORDS_REQUIRED": "पुराना पासवर्ड और नया पासवर्ड आवश्यक है",
+        "RESET_PASSWORD_FIELDS_REQUIRED": "ईमेल, OTP और नया पासवर्ड आवश्यक है",
+        "PASSWORD_UPDATED": "पासवर्ड सफलतापूर्वक अपडेट किया गया",
+        "OLD_PASSWORD_INCORRECT": "पुराना पासवर्ड गलत है",
+
+        "SIGNUP_SUCCESS": "खाता सफलतापूर्वक बनाया गया",
+        "LOGIN_SUCCESS": "लॉगिन सफल रहा",
+        "GOOGLE_LOGIN_SUCCESS": "Google लॉगिन सफल रहा",
+        "LOGOUT_SUCCESS": "लॉगआउट सफल रहा",
+
+        "EMAIL_NOT_VERIFIED": "कृपया पहले अपना ईमेल सत्यापित करें",
+        "EMAIL_VERIFIED": "ईमेल सफलतापूर्वक सत्यापित किया गया",
+        "INVALID_OTP": "अमान्य OTP",
+        "OTP_EXPIRED": "OTP की समय सीमा समाप्त हो गई है",
+        "OTP_REQUIRED": "OTP आवश्यक है",
+        "OTP_SENT": "OTP सफलतापूर्वक भेजा गया",
+
+        "FORGOT_PASSWORD_SUCCESS": "पासवर्ड रीसेट OTP सफलतापूर्वक भेजा गया",
+        "PASSWORD_RESET_SUCCESS": "पासवर्ड सफलतापूर्वक रीसेट किया गया",
+
+        "GOOGLE_PASSWORD_RESET": "Google अकाउंट पासवर्ड रीसेट का समर्थन नहीं करता। कृपया Google से लॉगिन करें।",
+
+        "TOKEN_REQUIRED": "ऑथेंटिकेशन टोकन आवश्यक है",
+        "INVALID_TOKEN": "अमान्य ऑथेंटिकेशन टोकन",
+        "TOKEN_EXPIRED": "ऑथेंटिकेशन टोकन की समय सीमा समाप्त हो गई है",
+        "TOKEN_REFRESHED": "टोकन सफलतापूर्वक रीफ़्रेश किया गया",
+        "UNAUTHORIZED": "अनधिकृत एक्सेस",
+
+        "ACCOUNT_INACTIVE": "आपका खाता निष्क्रिय है",
+        "ACCOUNT_DEACTIVATED": "खाता सफलतापूर्वक निष्क्रिय किया गया",
+        "ACCOUNT_ALREADY_DEACTIVATED": "खाता पहले से निष्क्रिय है",
+        "ACCOUNT_DELETED": "खाता सफलतापूर्वक हटाया गया",
+
+        "EMAIL_VERIFICATION_SUBJECT": "अपना ईमेल सत्यापित करें",
+        "PASSWORD_RESET_SUBJECT": "अपना पासवर्ड रीसेट करें"
+    },
+
+    "PROFILE": {
+        "PROFILE_NOT_FOUND": "प्रोफ़ाइल नहीं मिली",
+        "PROFILE_FETCHED": "प्रोफ़ाइल सफलतापूर्वक प्राप्त की गई",
+        "PROFILE_UPDATED": "प्रोफ़ाइल सफलतापूर्वक अपडेट की गई"
+    },
+
+    "BUSINESS": {
+        "BUSINESS_NOT_FOUND": "बिज़नेस प्रोफ़ाइल नहीं मिली",
+        "BUSINESS_ALREADY_EXISTS": "बिज़नेस प्रोफ़ाइल पहले से मौजूद है",
+        "BUSINESS_CREATED": "बिज़नेस प्रोफ़ाइल सफलतापूर्वक बनाई गई",
+        "BUSINESS_FETCHED": "बिज़नेस प्रोफ़ाइल सफलतापूर्वक प्राप्त की गई",
+        "BUSINESS_UPDATED": "बिज़नेस प्रोफ़ाइल सफलतापूर्वक अपडेट की गई",
+        "BUSINESS_DELETED": "बिज़नेस प्रोफ़ाइल सफलतापूर्वक हटाई गई",
+        "BUSINESS_CREATE_FAILED": "बिज़नेस प्रोफ़ाइल बनाने में विफल",
+        "BUSINESS_UPDATE_FAILED": "बिज़नेस प्रोफ़ाइल अपडेट करने में विफल"
+    },
+
+    "CUSTOMER": {
+        "CUSTOMER_NOT_FOUND": "ग्राहक नहीं मिला",
+        "CUSTOMER_CREATED": "ग्राहक सफलतापूर्वक बनाया गया",
+        "CUSTOMERS_FETCHED": "सभी ग्राहक सफलतापूर्वक प्राप्त किए गए",
+        "CUSTOMER_FETCHED": "ग्राहक सफलतापूर्वक प्राप्त किया गया",
+        "CUSTOMER_UPDATED": "ग्राहक सफलतापूर्वक अपडेट किया गया",
+        "CUSTOMER_DELETED": "ग्राहक सफलतापूर्वक हटाया गया",
+        "CUSTOMER_CREATE_FAILED": "ग्राहक बनाने में विफल",
+        "CUSTOMER_UPDATE_FAILED": "ग्राहक अपडेट करने में विफल"
+    },
+
+    "PRODUCT": {
+        "PRODUCT_NOT_FOUND": "उत्पाद नहीं मिला",
+        "PRODUCT_CREATED": "उत्पाद सफलतापूर्वक बनाया गया",
+        "PRODUCTS_FETCHED": "सभी उत्पाद सफलतापूर्वक प्राप्त किए गए",
+        "PRODUCT_FETCHED": "उत्पाद सफलतापूर्वक प्राप्त किया गया",
+        "PRODUCT_UPDATED": "उत्पाद सफलतापूर्वक अपडेट किया गया",
+        "PRODUCT_DELETED": "उत्पाद सफलतापूर्वक हटाया गया",
+        "PRODUCT_CREATE_FAILED": "उत्पाद बनाने में विफल",
+        "PRODUCT_UPDATE_FAILED": "उत्पाद अपडेट करने में विफल"
+    },
+
+    "INVOICE": {
+        "INVOICE_NOT_FOUND": "इनवॉइस नहीं मिला",
+        "INVOICE_CREATED": "इनवॉइस सफलतापूर्वक बनाया गया",
+        "INVOICE_FETCHED": "इनवॉइस सफलतापूर्वक प्राप्त किया गया",
+        "INVOICE_UPDATED": "इनवॉइस सफलतापूर्वक अपडेट किया गया",
+        "INVOICE_DELETED": "इनवॉइस सफलतापूर्वक हटाया गया",
+        "INVOICE_DUPLICATED": "इनवॉइस सफलतापूर्वक डुप्लिकेट किया गया",
+        "INVOICE_CREATE_FAILED": "इनवॉइस बनाने में विफल",
+        "INVOICE_UPDATE_FAILED": "इनवॉइस अपडेट करने में विफल",
+        "INVOICE_DELETE_FAILED": "इनवॉइस हटाने में विफल",
+
+        "BUSINESS_REQUIRED": "बिज़नेस प्रोफ़ाइल आवश्यक है",
+        "CUSTOMER_REQUIRED": "ग्राहक आवश्यक है",
+        "ITEMS_REQUIRED": "इनवॉइस आइटम आवश्यक हैं",
+        "INVALID_ITEMS": "अमान्य इनवॉइस आइटम"
+    },
+
+    "PDF": {
+        "PDF_GENERATED": "इनवॉइस PDF सफलतापूर्वक बनाई गई",
+        "PDF_DOWNLOAD_STARTED": "इनवॉइस PDF बनाना शुरू किया गया",
+        "PDF_NOT_FOUND": "इनवॉइस PDF नहीं मिली",
+        "PDF_GENERATION_FAILED": "इनवॉइस PDF बनाने में विफल",
+        "PDF_JOB_NOT_FOUND": "PDF जॉब नहीं मिली"
+    },
+
+    "EMAIL": {
+        "EMAIL_SENT": "ईमेल सफलतापूर्वक भेजा गया",
+        "EMAIL_FAILED": "ईमेल भेजने में विफल",
+        "EMAIL_QUEUED": "ईमेल सफलतापूर्वक कतार में जोड़ा गया",
+        "INVOICE_EMAIL_QUEUED": "इनवॉइस ईमेल सफलतापूर्वक कतार में जोड़ा गया",
+        "INVOICE_EMAIL_SENT": "इनवॉइस ईमेल सफलतापूर्वक भेजा गया",
+        "INVOICE_EMAIL_FAILED": "इनवॉइस ईमेल भेजने में विफल",
+        "EMAIL_JOB_NOT_FOUND": "ईमेल जॉब नहीं मिली"
+    },
+
+    "QUEUE": {
+        "JOB_QUEUED": "जॉब सफलतापूर्वक कतार में जोड़ी गई",
+        "JOB_COMPLETED": "जॉब सफलतापूर्वक पूरी हुई",
+        "JOB_FAILED": "जॉब विफल हुई",
+        "PDF_JOB_QUEUED": "इनवॉइस PDF जॉब सफलतापूर्वक कतार में जोड़ी गई",
+        "EMAIL_JOB_QUEUED": "ईमेल जॉब सफलतापूर्वक कतार में जोड़ी गई"
+    },
+
+    "VALIDATION": {
+        "REQUIRED_FIELDS": "आवश्यक फ़ील्ड मौजूद नहीं हैं",
+        "INVALID_DATA": "अमान्य डेटा",
+        "INVALID_ID": "अमान्य ID",
+        "INVALID_EMAIL": "अमान्य ईमेल पता",
+        "INVALID_AMOUNT": "अमान्य राशि",
+        "INVALID_DATE": "अमान्य तारीख"
+    },
+
+    "AUTHORIZATION": {
+        "FORBIDDEN": "आपको यह कार्रवाई करने की अनुमति नहीं है",
+        "ACCESS_DENIED": "एक्सेस अस्वीकृत"
+    }
+}
