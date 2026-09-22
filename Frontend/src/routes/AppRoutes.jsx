@@ -13,9 +13,19 @@ import ResetPassword from "../pages/auth/ResetPassword";
 
 import Dashboard from "../pages/dashboard/Dashboard";
 
+import Business from "../pages/business/Business";
+import Customers from "../pages/customers/Customers";
+import Products from "../pages/products/Products";
+
+import Invoices from "../pages/invoices/Invoices";
+import InvoiceCreate from "../pages/invoices/InvoiceCreate";
+import InvoiceEdit from "../pages/invoices/InvoiceEdit";
+import InvoiceView from "../pages/invoices/InvoiceView";
+
 import Profile from "../pages/profile/Profile";
 import EditProfile from "../pages/profile/EditProfile";
 import ChangePassword from "../pages/profile/ChangePassword";
+import NotFound from "../pages/profile/NotFound";
 
 import ProtectedRoute from "./ProtectedRoute";
 import PublicRoute from "./PublicRoute";
@@ -102,6 +112,48 @@ function AppRoutes() {
 
 
                 <Route
+                    path="/business"
+                    element={<Business />}
+                />
+
+
+                <Route
+                    path="/customers"
+                    element={<Customers />}
+                />
+
+
+                <Route
+                    path="/products"
+                    element={<Products />}
+                />
+
+
+                <Route
+                    path="/invoices"
+                    element={<Invoices />}
+                />
+
+
+                <Route
+                    path="/invoices/new"
+                    element={<InvoiceCreate />}
+                />
+
+
+                <Route
+                    path="/invoices/:id"
+                    element={<InvoiceView />}
+                />
+
+
+                <Route
+                    path="/invoices/:id/edit"
+                    element={<InvoiceEdit />}
+                />
+
+
+                <Route
                     path="/profile"
                     element={<Profile />}
                 />
@@ -121,6 +173,15 @@ function AppRoutes() {
 
             </Route>
 
+
+            {/* =====================
+                Fallback
+            ====================== */}
+
+            <Route
+                path="*"
+                element={<NotFound />}
+            />
 
 
         </Routes>

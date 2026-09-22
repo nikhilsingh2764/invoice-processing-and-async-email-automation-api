@@ -21,16 +21,18 @@ api.interceptors.response.use(
 
         const originalRequest = error.config;
 
-        // If there is no response from server
+        // No response from server
         if (!error.response) {
             return Promise.reject(error);
         }
 
-        // Don't try to refresh for these routes
+        const requestUrl = originalRequest?.url || "";
+
+        // Never refresh these requests
         if (
-            originalRequest.url.includes("/refresh-token") ||
-            originalRequest.url.includes("/login") ||
-            originalRequest.url.includes("/signup")
+            requestUrl.includes("/refresh-token") ||
+            requestUrl.includes("/login") ||
+            requestUrl.includes("/signup")
         ) {
             return Promise.reject(error);
         }
@@ -48,25 +50,19 @@ api.interceptors.response.use(
                 // Get new access token
                 await api.post("/refresh-token");
 
-                // Retry original request
+                // Retry original request ONCE
                 return api(originalRequest);
 
             } catch (refreshError) {
 
-                // Refresh token also expired
-
+                // Refresh failed → stop retrying
                 localStorage.clear();
 
-                window.location.href = "/login";
-
                 return Promise.reject(refreshError);
-
             }
-
         }
 
         return Promise.reject(error);
-
     }
 
 );
