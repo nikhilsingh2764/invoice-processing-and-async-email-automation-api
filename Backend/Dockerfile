@@ -6,7 +6,8 @@ ENV NODE_ENV=production
 
 COPY package*.json ./
 
-RUN npm ci --omit=dev
+# Add --ignore-scripts to skip running 'prepare' scripts (like husky) in production
+RUN npm ci --omit=dev --ignore-scripts
 
 COPY . .
 

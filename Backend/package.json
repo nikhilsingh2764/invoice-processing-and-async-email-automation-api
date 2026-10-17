@@ -6,7 +6,7 @@
     "worker": "nodemon src/worker/email.worker.js",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "prepare": "husky"
+    "prepare": "husky || true"
   },
   "dependencies": {
     "@getbrevo/brevo": "^6.0.2",
