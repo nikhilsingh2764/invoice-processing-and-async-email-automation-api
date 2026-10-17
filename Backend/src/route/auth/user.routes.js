@@ -107,39 +107,11 @@ const router = express.Router();
 
 router.post(
     "/signup",
-
-    (req, res, next) => {
-        console.log("🔥 1 ROUTE REACHED");
-        next();
-    },
-
     signupLimiter,
-
-    (req, res, next) => {
-        console.log("🔥 2 LIMITER PASSED");
-        next();
-    },
-
     signupValidator,
-
-    (req, res, next) => {
-        console.log("🔥 3 VALIDATOR PASSED");
-        next();
-    },
-
     validate,
-
-    (req, res, next) => {
-        console.log("🔥 4 VALIDATE PASSED");
-        next();
-    },
-
     Signup
 );
-
-
-
-
 
 
 /**

@@ -67,10 +67,6 @@ const businessSchema = new mongoose.Schema({
         trim: true
     },
 
-    logo: {
-        type: String,
-        trim: true
-    },
 
     invoicePrefix: {
         type: String,

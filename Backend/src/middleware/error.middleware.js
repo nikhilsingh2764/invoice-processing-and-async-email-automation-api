@@ -1,79 +1,71 @@
 import logger from "../utils/logger.js";
 import * as Sentry from "@sentry/node";
 
-
 const errorMiddleware = (err, req, res, next) => {
+   
+    let statusCode = err.statusCode || 500;
+    let message = err.message || "Something went wrong";
+    let errors = err.errors || null;
 
-   // Send error to Sentry
-    Sentry.captureException(err);
+    // 1. Mongoose Validation Error (e.g., schema validation failed)
+    if (err.name === "ValidationError") {
+        statusCode = 400;
+        message = "Validation Error";
+        errors = {};
+        for (const field in err.errors) {
+            errors[field] = err.errors[field].message;
+        }
+    }
 
-   logger.error({
-      message: err.message,
-      method: req.method,
-      url: req.originalUrl,
-      statusCode: err.statusCode || 500,
-      stack: err.stack
-   });
+    // 2. MongoDB Duplicate Key Error (Code 11000, e.g., unique email constraint)
+    if (err.code === 11000) {
+        statusCode = 409;
+        message = "Conflict Error: Duplicate field value entered";
+        errors = {};
+        const duplicateField = Object.keys(err.keyValue || {})[0];
+        if (duplicateField) {
+            errors[duplicateField] = `${duplicateField} already exists.`;
+        }
+    }
 
-   const statusCode = err.statusCode || 500;
+    // 3. Mongoose CastError (e.g., malformed ObjectId in route params like /invoice/abc)
+    if (err.name === "CastError") {
+        statusCode = 400;
+        message = `Invalid ${err.path}: ${err.value}`;
+        errors = { [err.path]: `Malformed ID or invalid type provided.` };
+    }
 
+    // Send server errors (5xx) to Sentry, skip client errors (4xx) to avoid noise
+    if (statusCode >= 500) {
+        Sentry.captureException(err);
+    }
 
-   return res.status(statusCode).json({
-      success: false,
-      message: err.message || "Something went wrong",
-  });
+    // Log the error
+    if (statusCode >= 500) {
+        logger.error({
+            message: err.message,
+            method: req.method,
+            url: req.originalUrl,
+            statusCode,
+            stack: err.stack
+        });
+    } else {
+        logger.warn(`Client Error [${statusCode}]: ${message} on ${req.method} ${req.originalUrl}`);
+    }
 
+    // Build the final response object
+    const response = {
+        success: false,
+        message,
+        ...(errors && { errors })
+    };
 
+    // Include stack trace only in development
+    if (process.env.NODE_ENV === "development") {
+        response.stack = err.stack;
+    }
+
+    return res.status(statusCode).json(response);
 };
 
-
 export default errorMiddleware;
-
-
-//ApiError        = only Creates the error not send to client
-//errorMiddleware = Sends the error response to client
-
-/*
-1. ApiError - only creates error obj and stores error data in it not send to client
-
-2. TryCatch - when TryCatch catches the error
-
-try {
-    ...
-} catch (error) {
-    next(error);
-}
-
-next(error) means: "Express, another middleware should handle this error."
-
-3. Express calls:  errorMiddleware(err, req, res, next)
- 
-Now it converts the error into an HTTP response and send in to client. 
-
-and other imp thing is:
-
-we call ApiError is service and service not have direct access to res
-Service
-   ↓
-throw ApiError
-   ↓
-TryCatch
-   ↓
-next(error)
-   ↓
-Error Middleware
-   ↓
-res.status(...).json(...)
-
-
-
-and ApiRes call in controller and controller have direct acess to res
-Success Response
-        ↓
-Controller
-        ↓
-res.json()
-
-
-*/
-

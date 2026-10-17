@@ -131,11 +131,6 @@ export const createBusinessValidator = [
                 .optional({ checkFalsy: true })
                 .trim(),
 
-        body("logo")
-                .optional({ checkFalsy: true })
-                .trim(),
-
-
 
         body("invoicePrefix")
                 .optional()

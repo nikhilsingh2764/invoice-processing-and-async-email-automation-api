@@ -15,8 +15,9 @@ const metricsMiddleware = (req, res, next) => {
         const duration =
             seconds + nanoseconds / 1e9;
 
+        // FIXED: Use req.route?.path if matched, otherwise fallback to "unmatched"
         const route =
-            req.route?.path || req.path;
+            req.route?.path || "unmatched";
 
         const labels = {
             method: req.method,

@@ -41,19 +41,44 @@ export const createCustomerService = async (
 
 export const getAllCustomersService = async (
     userId,
+    queryFilters = {}, 
     language = "en"
 ) => {
+    const page = Math.max(1, parseInt(queryFilters.page, 10) || 1);
+    const limit = Math.max(1, Math.min(100, parseInt(queryFilters.limit, 10) || 10));
+    const skip = (page - 1) * limit;
 
-    const customers =
-        await customerRepository.findAll(userId);
+    // 1. Always bind userId to the query so users only see their own data!
+    const query = { userId };
 
-    logger.info(
-        `Customers fetched successfully: ${userId}`
-    );
+    // 2. Add search filter if provided
+    if (queryFilters.search) {
+        query.$or = [
+            { name: { $regex: queryFilters.search, $options: "i" } },
+            { email: { $regex: queryFilters.search, $options: "i" } }
+        ];
+    }
 
-    return customers;
+    // 3. Pass the combined query object containing the userId
+    const [customers, total] = await Promise.all([
+        customerRepository.findAll(query, skip, limit),
+        customerRepository.countDocuments(query)
+    ]);
+
+    const totalPages = Math.ceil(total / limit);
+
+    return {
+        customers,
+        pagination: {
+            total,
+            page,
+            limit,
+            pages: totalPages,
+            hasNextPage: page < totalPages,
+            hasPrevPage: page > 1
+        }
+    };
 };
-
 
 
 

@@ -1,6 +1,5 @@
 import { body } from "express-validator";
 
-
 export const createInvoiceValidator = [
 
     body("customerId")
@@ -22,8 +21,8 @@ export const createInvoiceValidator = [
     body("items.*.quantity")
         .notEmpty()
         .withMessage("Quantity is required")
-        .isInt({ min: 1 })
-        .withMessage("Quantity must be at least 1"),
+        .isFloat({ min: 0.01 })
+        .withMessage("Quantity must be greater than 0"),
 
     body("dueDate")
         .notEmpty()
@@ -69,8 +68,6 @@ export const createInvoiceValidator = [
 
 ];
 
-
-
 export const updateInvoiceValidator = [
 
     body("customerId")
@@ -90,8 +87,8 @@ export const updateInvoiceValidator = [
 
     body("items.*.quantity")
         .optional()
-        .isInt({ min: 1 })
-        .withMessage("Quantity must be at least 1"),
+        .isFloat({ min: 0.01 })
+        .withMessage("Quantity must be greater than 0"),
 
     body("dueDate")
         .optional()
@@ -135,3 +132,4 @@ export const updateInvoiceValidator = [
         .withMessage("Terms and conditions cannot exceed 2000 characters")
 
 ];
+

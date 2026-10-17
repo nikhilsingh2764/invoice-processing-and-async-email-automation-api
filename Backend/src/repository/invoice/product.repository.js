@@ -7,18 +7,31 @@ class ProductRepository {
         return await Product.create(productData);
     }
 
-
-    // Get All Products
-    async findAll(userId) {
-        return await Product.find({ userId });
+    // Get All Products (with support for query filters, skip, limit)
+    async findAll(query = {}, skip = 0, limit = 10) {
+        return await Product.find(query)
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit);
     }
 
+    // Count documents matching the query (for pagination metadata)
+    async countDocuments(query = {}) {
+        return await Product.countDocuments(query);
+    }
 
     // Get Product By ID
     async findByIdAndUserId(productId, userId) {
         return await Product.findOne({ _id: productId, userId });
     }
 
+    // Batch Get Products By IDs and User ID (NEW)
+    async findManyByIdsAndUserId(productIds, userId) {
+        return await Product.find({
+            _id: { $in: productIds },
+            userId
+        });
+    }
 
     // Get Product By Name
     async findByName(productName, userId) {
@@ -28,12 +41,10 @@ class ProductRepository {
         });
     }
 
-
     // Check Product Exists
     async existsById(productId) {
         return await Product.exists({ _id: productId });
     }
-
 
     // Update Product By ID + userId
     async updateByIdAndUserId(productId, userId, updatedData) {

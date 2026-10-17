@@ -16,7 +16,9 @@ import {
     deleteInvoice,
     downloadInvoicePDF,
     sendInvoiceEmail,
-    duplicateInvoice
+    duplicateInvoice,
+    getInvoicePDFStatus,
+    getInvoiceEmailStatus
 } from '../../controller/invoice/invoice.controller.js';
 
 import {
@@ -24,9 +26,9 @@ import {
     invoiceUpdateLimiter,
     invoiceDeleteLimiter,
     invoiceEmailLimiter,
-    invoiceWhatsappLimiter,
     invoiceDuplicateLimiter,
-    invoiceReadLimiter
+    invoiceReadLimiter,
+    invoicePdfLimiter
 } from '../../middleware/rateLimiter.middleware.js';
 
 
@@ -401,6 +403,7 @@ router.delete(
  */
 router.get(
     "/invoice/:id/pdf",
+    invoicePdfLimiter,
     authMiddleware,
     downloadInvoicePDF
 );
@@ -493,6 +496,18 @@ router.post(
     invoiceDuplicateLimiter,
     authMiddleware,
     duplicateInvoice
+);
+
+router.get(
+    "/invoice/pdf/status/:jobId",
+    authMiddleware,
+    getInvoicePDFStatus
+);
+
+router.get(
+    "/invoice/email/status/:jobId",
+    authMiddleware,
+    getInvoiceEmailStatus
 );
 
 

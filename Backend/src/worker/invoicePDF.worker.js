@@ -12,7 +12,7 @@ const invoicePDFWorker = new Worker(
 
     async (job) => {
 
-        const { userId, invoiceId } = job.data;
+        const { userId, invoiceId, updatedAtTime } = job.data;
 
         logger.info(`Processing PDF job: ${job.id}`);
 
@@ -30,7 +30,7 @@ const invoicePDFWorker = new Worker(
         const pdfBuffer = await generateInvoicePDF(invoice);
 
         // 3. Create Redis cache key
-        const cacheKey = `invoice:pdf:${userId}:${invoiceId}`;
+        const cacheKey = `invoice:pdf:${userId}:${invoiceId}:${updatedAtTime}`;
 
         // 4. Store PDF in Redis for 1 hour
         await redis.set(
@@ -49,7 +49,6 @@ const invoicePDFWorker = new Worker(
 
     {
         connection: redis,
-
         concurrency: 5,
     }
 );

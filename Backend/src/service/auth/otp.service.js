@@ -33,12 +33,15 @@ const sendOTPService = async ({ username = null, email, password = null, type, l
     // Generate 6-digit OTP
     const otp = generateOTP();
 
+    // Hash the OTP before storing it
+    const hashedOtp = await bcrypt.hash(otp, 10);
+
 
     // Store OTP in Redis with expiry
     const key = `otp:${type}:${email}`;
 
     const otpData = {
-        otp,
+        otp: hashedOtp,
         email,
         username,
         password: hashedPassword,
@@ -99,7 +102,7 @@ const sendOTPService = async ({ username = null, email, password = null, type, l
             {
                 // Optional: Ensure job ID is unique or trackable
                 removeOnComplete: true,
-                removeOnFail: false
+                removeOnFail: 100
             }
         );
 

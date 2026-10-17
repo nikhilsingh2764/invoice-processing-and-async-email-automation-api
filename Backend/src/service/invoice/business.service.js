@@ -15,24 +15,11 @@ export const createBusinessService = async ({
 
     const cacheKey = `business:${userId}`;
 
-    let business = await redis.get(cacheKey);
-
-    if (business) {
-
-        logger.info(
-            `Business profile cache already exists: ${userId}`
-        );
-
-        return JSON.parse(business);
-    }
-
-
-    // Check business exists or not
+    // Check business exists in DB or cache
     const existedBusiness =
         await businessRepository.existsByUserId(userId);
 
     if (existedBusiness) {
-
         logger.warn(
             `Business profile creation attempted for existing profile: ${userId}`
         );
@@ -46,17 +33,13 @@ export const createBusinessService = async ({
         );
     }
 
-
     businessData.userId = userId;
-
 
     // Store businessData in DB
     const BusinessProfile =
         await businessRepository.create(businessData);
 
-
     if (!BusinessProfile) {
-
         logger.error(
             `Business profile creation failed: ${userId}`
         );
@@ -70,14 +53,13 @@ export const createBusinessService = async ({
         );
     }
 
-
+    // Cache with a lower TTL (60 seconds) to prevent stale invoice counters
     await redis.set(
         cacheKey,
         JSON.stringify(BusinessProfile),
         "EX",
-        600
+        60
     );
-
 
     logger.info(
         `Business profile created successfully: ${userId}`
@@ -96,13 +78,11 @@ export const getBusinessProfileService = async (
 
     const cacheKey = `business:${userId}`;
 
-
     // Check Redis
     const cachedBusiness =
         await redis.get(cacheKey);
 
     if (cachedBusiness) {
-
         logger.info(
             `Business profile cache hit: ${userId}`
         );
@@ -110,32 +90,10 @@ export const getBusinessProfileService = async (
         return JSON.parse(cachedBusiness);
     }
 
-
-    const existedBusiness =
-        await businessRepository.existsByUserId(userId);
-
-    if (!existedBusiness) {
-
-        logger.warn(
-            `Business profile not found: ${userId}`
-        );
-
-        throw new ApiError(
-            404,
-            translate(
-                "BUSINESS.BUSINESS_NOT_FOUND",
-                language
-            )
-        );
-    }
-
-
     const businessProfile =
         await businessRepository.findByUserId(userId);
 
-
     if (!businessProfile) {
-
         logger.warn(
             `Business profile not found: ${userId}`
         );
@@ -149,15 +107,13 @@ export const getBusinessProfileService = async (
         );
     }
 
-
-    // Set Redis
+    // Set Redis with 60s TTL
     await redis.set(
         cacheKey,
         JSON.stringify(businessProfile),
         "EX",
-        600
+        60
     );
-
 
     logger.info(
         `Business profile fetched from DB and cached: ${userId}`
@@ -175,12 +131,10 @@ export const updateBusinessProfileService = async ({
     language = "en"
 }) => {
 
-    // Check exist or not
     const accountExist =
         await businessRepository.existsByUserId(userId);
 
     if (!accountExist) {
-
         logger.warn(
             `Business profile update attempted for non-existing profile: ${userId}`
         );
@@ -194,16 +148,13 @@ export const updateBusinessProfileService = async ({
         );
     }
 
-
     const updatedData =
         await businessRepository.updateByUserId(
             userId,
             newBusinessData
         );
 
-
     if (!updatedData) {
-
         logger.error(
             `Business profile update failed: ${userId}`
         );
@@ -217,19 +168,17 @@ export const updateBusinessProfileService = async ({
         );
     }
 
+    // Remove old Redis cache immediately
+    const cacheKey = `business:${userId}`;
+    await redis.del(cacheKey);
 
-    // Remove old Redis cache
-    await redis.del(`business:${userId}`);
-
-
-    // Store updated business profile
+    // Store updated business profile with fresh 60s TTL
     await redis.set(
-        `business:${userId}`,
+        cacheKey,
         JSON.stringify(updatedData),
         "EX",
-        600
+        60
     );
-
 
     logger.info(
         `Business profile updated successfully: ${userId}`
@@ -250,7 +199,6 @@ export const deleteBusinessProfileService = async (
         await businessRepository.existsByUserId(userId);
 
     if (!accountExist) {
-
         logger.warn(
             `Business profile deletion attempted for non-existing profile: ${userId}`
         );
@@ -264,11 +212,9 @@ export const deleteBusinessProfileService = async (
         );
     }
 
-
     await businessRepository.deleteByUserId(userId);
 
     await redis.del(`business:${userId}`);
-
 
     logger.info(
         `Business profile deleted successfully: ${userId}`

@@ -8,8 +8,7 @@ class UserRepository {
     async create(userdata) {
         return await User.create(userdata);
     }
-
-
+ 
 
     //find
 

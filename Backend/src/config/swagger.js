@@ -13,7 +13,7 @@ const options = {
 
         servers: [
             {
-                url: "https://special-rotary-phone-5g49xvj57j49344gq-8000.app.github.dev/api/v1"
+                url: "https://backend-api-lbvm.onrender.com/api/v1"
             }
         ],
 

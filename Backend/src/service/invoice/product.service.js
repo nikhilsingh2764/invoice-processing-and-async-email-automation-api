@@ -3,18 +3,13 @@ import productRepository from "../../repository/invoice/product.repository.js";
 import logger from "../../utils/logger.js";
 import translate from "../../utils/translate.js";
 
-
-
 export const createProductService = async (
     productData,
     language = "en"
 ) => {
-
-    const product =
-        await productRepository.create(productData);
+    const product = await productRepository.create(productData);
 
     if (!product) {
-
         logger.error(
             `Product creation failed: ${productData.userId}`
         );
@@ -28,7 +23,6 @@ export const createProductService = async (
         );
     }
 
-
     logger.info(
         `Product created successfully: ${product._id}`
     );
@@ -36,41 +30,63 @@ export const createProductService = async (
     return product;
 };
 
-
-
-
 export const getAllProductsService = async (
     userId,
+    queryFilters = {},
     language = "en"
 ) => {
+    // 1. Parse and sanitize pagination inputs
+    const page = Math.max(1, parseInt(queryFilters.page, 10) || 1);
+    const limit = Math.max(1, Math.min(100, parseInt(queryFilters.limit, 10) || 10));
+    const skip = (page - 1) * limit;
 
-    const products =
-        await productRepository.findAll(userId);
+    // 2. Build query object scoped to userId
+    const query = { userId };
+
+    // 3. Add search filter (supports product name or description)
+    if (queryFilters.search) {
+        query.$or = [
+            { productName: { $regex: queryFilters.search, $options: "i" } },
+            { description: { $regex: queryFilters.search, $options: "i" } }
+        ];
+    }
+
+    // 4. Execute queries concurrently
+    const [products, total] = await Promise.all([
+        productRepository.findAll(query, skip, limit),
+        productRepository.countDocuments(query)
+    ]);
 
     logger.info(
-        `Products fetched successfully: ${userId}`
+        `Products fetched successfully: ${userId} (Page: ${page})`
     );
 
-    return products;
+    const totalPages = Math.ceil(total / limit);
+
+    return {
+        products,
+        pagination: {
+            total,
+            page,
+            limit,
+            pages: totalPages,
+            hasNextPage: page < totalPages,
+            hasPrevPage: page > 1
+        }
+    };
 };
-
-
-
 
 export const getProductByIdService = async (
     productId,
     userId,
     language = "en"
 ) => {
-
-    const product =
-        await productRepository.findByIdAndUserId(
-            productId,
-            userId
-        );
+    const product = await productRepository.findByIdAndUserId(
+        productId,
+        userId
+    );
 
     if (!product) {
-
         logger.warn(
             `Product not found: ${productId}`
         );
@@ -84,12 +100,8 @@ export const getProductByIdService = async (
         );
     }
 
-
     return product;
 };
-
-
-
 
 export const updateProductService = async (
     productId,
@@ -97,15 +109,12 @@ export const updateProductService = async (
     updateData,
     language = "en"
 ) => {
-
-    const product =
-        await productRepository.findByIdAndUserId(
-            productId,
-            userId
-        );
+    const product = await productRepository.findByIdAndUserId(
+        productId,
+        userId
+    );
 
     if (!product) {
-
         logger.warn(
             `Product update attempted for non-existing product: ${productId}`
         );
@@ -119,16 +128,13 @@ export const updateProductService = async (
         );
     }
 
-
-    const updatedProduct =
-        await productRepository.updateByIdAndUserId(
-            productId,
-            userId,
-            updateData
-        );
+    const updatedProduct = await productRepository.updateByIdAndUserId(
+        productId,
+        userId,
+        updateData
+    );
 
     if (!updatedProduct) {
-
         logger.error(
             `Product update failed: ${productId}`
         );
@@ -142,7 +148,6 @@ export const updateProductService = async (
         );
     }
 
-
     logger.info(
         `Product updated successfully: ${productId}`
     );
@@ -150,23 +155,17 @@ export const updateProductService = async (
     return updatedProduct;
 };
 
-
-
-
 export const deleteProductService = async (
     productId,
     userId,
     language = "en"
 ) => {
-
-    const product =
-        await productRepository.findByIdAndUserId(
-            productId,
-            userId
-        );
+    const product = await productRepository.findByIdAndUserId(
+        productId,
+        userId
+    );
 
     if (!product) {
-
         logger.warn(
             `Product deletion attempted for non-existing product: ${productId}`
         );
@@ -180,12 +179,10 @@ export const deleteProductService = async (
         );
     }
 
-
     await productRepository.deleteByIdAndUserId(
         productId,
         userId
     );
-
 
     logger.info(
         `Product deleted successfully: ${productId}`

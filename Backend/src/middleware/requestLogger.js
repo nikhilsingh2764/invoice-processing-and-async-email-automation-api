@@ -1,20 +1,17 @@
 import logger from "../utils/logger.js";
 
 const requestLogger = (req, res, next) => {
-
-    const startTime = Date.now();
+    const start = Date.now();
 
     res.on("finish", () => {
-
-        const duration = Date.now() - startTime;
-
+        const duration = Date.now() - start;
         logger.info({
             method: req.method,
             url: req.originalUrl,
-            statusCode: res.statusCode,
-            responseTime: `${duration}ms`
+            status: res.statusCode,
+            duration: `${duration}ms`,
+            ip: req.ip
         });
-
     });
 
     next();

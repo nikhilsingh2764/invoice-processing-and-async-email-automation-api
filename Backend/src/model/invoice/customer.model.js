@@ -2,7 +2,6 @@ import mongoose from "mongoose";
 import addressSchema from "./address.model.js";
 
 
-
 const CustomerSchema = new mongoose.Schema({
 
     userId: {
@@ -56,7 +55,7 @@ const CustomerSchema = new mongoose.Schema({
         type: String,
         trim: true,
         required: true,
-        enum: ["Individual ", "Business"],
+        enum: ["Individual", "Business"],
         default: "Individual"
     },
 
@@ -83,8 +82,9 @@ const CustomerSchema = new mongoose.Schema({
 
 }, { timestamps: true })
 
-const Customer = mongoose.model("Customer", CustomerSchema)
+CustomerSchema.index({ userId: 1, email: 1 }, { unique: true });
 
+const Customer = mongoose.model("Customer", CustomerSchema)
 
 export default Customer;
 

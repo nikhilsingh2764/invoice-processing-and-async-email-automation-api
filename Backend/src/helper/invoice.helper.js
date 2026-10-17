@@ -1,42 +1,56 @@
 import ApiError from "../utils/ApiError.js";
 import productRepository from "../repository/invoice/product.repository.js";
 
+const toPaise = (amount) => Math.round(Number(amount) * 100);
+const toRupees = (paise) => Number((paise / 100).toFixed(2));
+
 export const buildInvoiceItems = async (items, userId) => {
 
     if (!items || items.length === 0) {
         throw new ApiError(400, "Invoice must contain at least one product");
     }
 
-    const invoiceItems = [];
+    // 1. Check for duplicate product IDs in the request
+    const productIds = items.map(item => item.productId);
+    const uniqueProductIds = new Set(productIds);
+    if (uniqueProductIds.size !== productIds.length) {
+        throw new ApiError(400, "Duplicate products are not allowed in the same invoice");
+    }
 
-    let subTotal = 0;
-    let totalTax = 0;
-    let totalDiscount = 0;
+    // 2. Validate quantities for each item early
+    for (const item of items) {
+        if (!item.quantity || item.quantity <= 0) {
+            throw new ApiError(400, "Quantity must be greater than 0");
+        }
+    }
+
+    // 3. Batch fetch all products in a SINGLE query using $in
+    const products = await productRepository.findManyByIdsAndUserId(Array.from(uniqueProductIds), userId);
+
+    // Create a O(1) lookup map keyed by product ID string
+    const productMap = new Map(products.map(p => [p._id.toString(), p]));
+
+    const invoiceItems = [];
+    let subTotalPaise = 0;
+    let totalTaxPaise = 0;
+    let totalDiscountPaise = 0;
 
     for (const item of items) {
-
-        const product = await productRepository.findByIdAndUserId(item.productId, userId);
+        const product = productMap.get(item.productId.toString());
 
         if (!product) {
-            throw new ApiError(404, `Product not found: ${item.productId}`);
+            throw new ApiError(404, `Product not found or unauthorized: ${item.productId}`);
         }
 
-        const itemSubTotal = product.price * item.quantity;
+        const pricePaise = toPaise(product.price);
+        const itemSubTotalPaise = Math.round(pricePaise * item.quantity);
 
-        const discountAmount =
-            (itemSubTotal * product.discount) / 100;
-
-        const taxableAmount =
-            itemSubTotal - discountAmount;
-
-        const taxAmount =
-            (taxableAmount * product.taxRate) / 100;
-
-        const lineTotal =
-            taxableAmount + taxAmount;
+        const discountAmountPaise = Math.round((itemSubTotalPaise * product.discount) / 100);
+        const taxableAmountPaise = itemSubTotalPaise - discountAmountPaise;
+        const taxAmountPaise = Math.round((taxableAmountPaise * product.taxRate) / 100);
+        const lineTotalPaise = taxableAmountPaise + taxAmountPaise;
 
         invoiceItems.push({
-
             productId: product._id,
             productName: product.productName,
             description: product.description,
@@ -46,23 +60,22 @@ export const buildInvoiceItems = async (items, userId) => {
             quantity: item.quantity,
             taxRate: product.taxRate,
             discount: product.discount,
-            lineTotal
-
+            lineTotal: toRupees(lineTotalPaise)
         });
 
-        subTotal += itemSubTotal;
-        totalDiscount += discountAmount;
-        totalTax += taxAmount;
+        subTotalPaise += itemSubTotalPaise;
+        totalDiscountPaise += discountAmountPaise;
+        totalTaxPaise += taxAmountPaise;
     }
 
+    const grandTotalPaise = subTotalPaise - totalDiscountPaise + totalTaxPaise;
+
     return {
-
         invoiceItems,
-        subTotal,
-        totalTax,
-        totalDiscount,
-        grandTotal: subTotal - totalDiscount + totalTax
-
+        subTotal: toRupees(subTotalPaise),
+        totalTax: toRupees(totalTaxPaise),
+        totalDiscount: toRupees(totalDiscountPaise),
+        grandTotal: toRupees(grandTotalPaise)
     };
 
 };

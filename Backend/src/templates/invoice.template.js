@@ -7,7 +7,7 @@
  *   doc.end();
  *
  * Optional invoice fields (all safe to omit):
- *   business: { businessName, address, email, phone, gstin, logo (Buffer|path),
+ *   business: { businessName, address, email, phone, gstin,
  *               bankName, accountNumber, ifsc, upiId }
  *   customer: { customerName|name, address, email, phone, gstin }
  *   items:    [{ name|itemName, description, quantity, price }]
@@ -164,22 +164,13 @@ const generateInvoiceTemplate = (doc, invoice = {}) => {
         const biz = invoice.business || {};
         const name = biz.businessName || "Business Name";
 
-        // Logo (if provided) or initials badge
+        // Initials badge (replacing logo functionality completely)
         const logoSize = 38;
-        let drewLogo = false;
-        if (biz.logo) {
-            try {
-                doc.image(biz.logo, left, top, { fit: [logoSize, logoSize] });
-                drewLogo = true;
-            } catch (_) { /* fall back to initials */ }
-        }
-        if (!drewLogo) {
-            const initials = name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0].toUpperCase()).join("");
-            doc.roundedRect(left, top, logoSize, logoSize, 6).fill(color.accent);
-            line(initials || "B", left, top + 12, logoSize, {
-                font: "Helvetica-Bold", size: 15, fill: color.white, align: "center"
-            });
-        }
+        const initials = name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0].toUpperCase()).join("");
+        doc.roundedRect(left, top, logoSize, logoSize, 6).fill(color.accent);
+        line(initials || "B", left, top + 12, logoSize, {
+            font: "Helvetica-Bold", size: 15, fill: color.white, align: "center"
+        });
 
         // Business info
         const bx = left + logoSize + 10;
@@ -434,7 +425,7 @@ const generateInvoiceTemplate = (doc, invoice = {}) => {
             font: "Helvetica-Bold", size: 8.5, fill: color.accent, align: "center"
         });
         line(
-            `${invoice.business?.businessName || "Business"}  \u2022  Invoice #${invoice.invoiceNumber || ""}  \u2022  This is a computer-generated invoice`,
+            `${invoice.business?.businessName || "Business"}   \u2022   Invoice #${invoice.invoiceNumber || ""}   \u2022   This is a computer-generated invoice`,
             left, footerLineY + 18, contentWidth,
             { size: 7, align: "center" }
         );

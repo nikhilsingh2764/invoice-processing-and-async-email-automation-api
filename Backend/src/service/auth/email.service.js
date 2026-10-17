@@ -38,13 +38,9 @@ const sendEmail = async ({
     senderName = "Invoice App",
     replyTo,
     text,
-    tags = []
+    tags = [],
+    userId = "N/A" // Pass a safe userId or recipient reference for logging
 }) => {
-
-
- console.log("🔥 sendEmail CALLED");
-    console.log("To:", to);
-    console.log("Brevo key exists:", !!process.env.BREVO_API_KEY);
 
 
     try {
@@ -94,7 +90,8 @@ const sendEmail = async ({
                     "api-key": process.env.BREVO_API_KEY
                 },
 
-                body: JSON.stringify(emailData)
+                body: JSON.stringify(emailData),
+                signal: AbortSignal.timeout(10000)
             }
         );
 
@@ -104,7 +101,7 @@ const sendEmail = async ({
             const error = await response.text();
 
             logger.error(
-                `Email sending failed: ${to} - [Brevo ${response.status}] ${error}`
+                `Email sending failed for user ID: ${userId} [Brevo ${response.status}] ${error}`
             );
 
             // Brevo's real reason travels with the error so the worker log shows it
@@ -120,7 +117,7 @@ const sendEmail = async ({
 
 
         logger.info(
-            `Email sent successfully: ${to}`
+            `Email sent successfully for user ID: ${userId}`
         );
 
     } catch (error) {

@@ -18,94 +18,59 @@ import translate from "../../utils/translate.js";
 
 
 // Create Invoice
-export const createInvoiceService = async (
-    userData,
-    language = "en"
-) => {
-
+export const createInvoiceService = async (userData, language = "en") => {
     const session = await mongoose.startSession();
 
     try {
+        return await session.withTransaction(async () => {
+            const {
+                userId,
+                customerId,
+                items,
+                dueDate,
+                paymentMethod,
+                notes,
+                status
+            } = userData;
 
-        session.startTransaction();
-
-        const {
-            userId,
-            customerId,
-            items,
-            dueDate,
-            paymentMethod,
-            notes,
-            status
-        } = userData;
-
-
-        // Increment invoice number
-        const business =
-            await businessRepository.incrementInvoiceNumber(
+            // Increment invoice number with session
+            const business = await businessRepository.incrementInvoiceNumber(
                 userId,
                 session
             );
 
-        if (!business) {
+            if (!business) {
+                logger.warn(`Invoice creation failed - business profile not found: ${userId}`);
+                throw new ApiError(404, translate("BUSINESS.BUSINESS_NOT_FOUND", language));
+            }
 
-            logger.warn(
-                `Invoice creation failed - business profile not found: ${userId}`
-            );
-
-            throw new ApiError(
-                404,
-                translate(
-                    "BUSINESS.BUSINESS_NOT_FOUND",
-                    language
-                )
-            );
-        }
-
-
-        // Find customer belonging to user
-        const customer =
-            await customerRepository.findByIdAndUserId(
+            // Find customer belonging to user with session
+            const customer = await customerRepository.findByIdAndUserId(
                 customerId,
-                userId
+                userId,
+                session
             );
 
-        if (!customer) {
+            if (!customer) {
+                logger.warn(`Invoice creation failed - customer not found: ${customerId}`);
+                throw new ApiError(404, translate("CUSTOMER.CUSTOMER_NOT_FOUND", language));
+            }
 
-            logger.warn(
-                `Invoice creation failed - customer not found: ${customerId}`
-            );
+            // Build invoice items with session
+            const {
+                invoiceItems,
+                subTotal,
+                totalTax,
+                totalDiscount,
+                grandTotal
+            } = await buildInvoiceItems(items, userId, session);
 
-            throw new ApiError(
-                404,
-                translate(
-                    "CUSTOMER.CUSTOMER_NOT_FOUND",
-                    language
-                )
-            );
-        }
+            const invoiceNumber = `${business.invoicePrefix}-${business.nextInvoiceNumber}`;
 
-
-        // Build invoice items
-        const {
-            invoiceItems,
-            subTotal,
-            totalTax,
-            totalDiscount,
-            grandTotal
-        } = await buildInvoiceItems(items, userId);
-
-
-        const invoiceNumber =
-            `${business.invoicePrefix}-${business.invoiceStartNumber}`;
-
-
-        // Create invoice
-        const invoice =
-            await invoiceRepository.create(
+            // Create invoice with session
+            const invoice = await invoiceRepository.create(
                 {
                     userId,
-
                     business: {
                         businessName: business.businessName,
                         ownerName: business.ownerName,
@@ -117,7 +82,6 @@ export const createInvoiceService = async (
                         currency: business.currency,
                         address: business.address
                     },
-
                     customer: {
                         customerName: customer.customerName,
                         email: customer.email,
@@ -129,56 +93,31 @@ export const createInvoiceService = async (
                         billingAddress: customer.billingAddress,
                         shippingAddress: customer.shippingAddress
                     },
-
                     items: invoiceItems,
-
                     invoiceNumber,
-
                     subTotal,
                     totalTax,
                     totalDiscount,
                     grandTotal,
-
                     dueDate,
                     paymentMethod,
                     notes,
-
-                    termsAndConditions:
-                        business.termsAndConditions,
-
+                    termsAndConditions: business.termsAndConditions,
                     status
                 },
                 session
             );
 
-
-        await session.commitTransaction();
-
-
-        logger.info(
-            `Invoice created successfully: ${invoice._id}`
-        );
-
-
-        return invoice;
-
+            logger.info(`Invoice created successfully: ${invoice._id}`);
+            return invoice;
+        });
     } catch (error) {
-
-        await session.abortTransaction();
-
-        logger.error(
-            `Invoice creation failed: ${error.message}`
-        );
-
+        logger.error(`Invoice creation failed: ${error.message}`);
         throw error;
-
     } finally {
-
         await session.endSession();
-
     }
 };
-
 
 
 // Get Invoice By ID
@@ -254,141 +193,103 @@ export const getInvoiceByIdService = async (
 
 
 // Update Invoice
-export const updateInvoiceService = async (
-    userId,
-    invoiceId,
-    updatedData,
-    language = "en"
-) => {
+export const updateInvoiceService = async (userId, invoiceId, rawUpdatedData, language = "en") => {
+    const session = await mongoose.startSession();
 
-    // Check invoice ownership
-    const invoice =
-        await invoiceRepository.findById(
-            userId,
-            invoiceId
-        );
+    try {
+        const updatedInvoice = await session.withTransaction(async () => {
+            const allowedUpdates = [
+                "items",
+                "dueDate",
+                "paymentMethod",
+                "notes",
+                "status",
+                "customerId"
+            ];
 
-    if (!invoice) {
+            const updatedData = {};
+            for (const key of allowedUpdates) {
+                if (rawUpdatedData[key] !== undefined) {
+                    updatedData[key] = rawUpdatedData[key];
+                }
+            }
 
-        logger.warn(
-            `Invoice update attempted for non-existing invoice: ${invoiceId}`
-        );
+            // Check invoice ownership with session
+            const invoice = await invoiceRepository.findById(userId, invoiceId, session);
+            if (!invoice) {
+                logger.warn(`Invoice update attempted for non-existing invoice: ${invoiceId}`);
+                throw new ApiError(404, translate("INVOICE.INVOICE_NOT_FOUND", language));
+            }
 
-        throw new ApiError(
-            404,
-            translate(
-                "INVOICE.INVOICE_NOT_FOUND",
-                language
-            )
-        );
-    }
+            // Rebuild invoice items and totals if items changed
+            if (updatedData.items) {
+                const {
+                    invoiceItems,
+                    subTotal,
+                    totalTax,
+                    totalDiscount,
+                    grandTotal
+                } = await buildInvoiceItems(updatedData.items, userId, session);
 
+                updatedData.items = invoiceItems;
+                updatedData.subTotal = subTotal;
+                updatedData.totalTax = totalTax;
+                updatedData.totalDiscount = totalDiscount;
+                updatedData.grandTotal = grandTotal;
+            }
 
-    // Rebuild invoice items and totals
-    if (updatedData.items) {
+            // Update customer snapshot if customerId changed
+            if (updatedData.customerId) {
+                const customer = await customerRepository.findByIdAndUserId(updatedData.customerId, userId, session);
+                if (!customer) {
+                    logger.warn(`Invoice update failed - customer not found: ${updatedData.customerId}`);
+                    throw new ApiError(404, translate("CUSTOMER.CUSTOMER_NOT_FOUND", language));
+                }
 
-        const {
-            invoiceItems,
-            subTotal,
-            totalTax,
-            totalDiscount,
-            grandTotal
-        } = await buildInvoiceItems(
-            updatedData.items,
-            userId
-        );
+                updatedData.customer = {
+                    customerName: customer.customerName,
+                    email: customer.email,
+                    phone: customer.phone,
+                    companyName: customer.companyName,
+                    gstNumber: customer.gstNumber,
+                    customerType: customer.customerType,
+                    notes: customer.notes,
+                    billingAddress: customer.billingAddress,
+                    shippingAddress: customer.shippingAddress
+                };
 
-        updatedData.items = invoiceItems;
-        updatedData.subTotal = subTotal;
-        updatedData.totalTax = totalTax;
-        updatedData.totalDiscount = totalDiscount;
-        updatedData.grandTotal = grandTotal;
-    }
+                delete updatedData.customerId;
+            }
 
-
-    // Update customer snapshot
-    if (updatedData.customerId) {
-
-        const customer =
-            await customerRepository.findByIdAndUserId(
-                updatedData.customerId,
-                userId
+            // Update MongoDB using session
+            const result = await invoiceRepository.updateById(
+                userId,
+                invoiceId,
+                updatedData,
+                session
             );
 
-        if (!customer) {
+            if (!result) {
+                logger.error(`Invoice update failed: ${invoiceId}`);
+                throw new ApiError(500, translate("INVOICE.INVOICE_UPDATE_FAILED", language));
+            }
 
-            logger.warn(
-                `Invoice update failed - customer not found: ${updatedData.customerId}`
-            );
+            return result;
+        });
 
-            throw new ApiError(
-                404,
-                translate(
-                    "CUSTOMER.CUSTOMER_NOT_FOUND",
-                    language
-                )
-            );
-        }
+        // Invalidate caches after successful transaction commit
+        await redis.del(`invoice:${invoiceId}:${userId}`);
+        await redis.del(`invoice:pdf:${userId}:${invoiceId}`);
 
+        logger.info(`Invoice updated successfully: ${invoiceId}`);
+        return updatedInvoice;
 
-        updatedData.customer = {
-            customerName: customer.customerName,
-            email: customer.email,
-            phone: customer.phone,
-            companyName: customer.companyName,
-            gstNumber: customer.gstNumber,
-            customerType: customer.customerType,
-            notes: customer.notes,
-            billingAddress: customer.billingAddress,
-            shippingAddress: customer.shippingAddress
-        };
-
-        delete updatedData.customerId;
+    } catch (error) {
+        logger.error(`Invoice update failed: ${error.message}`);
+        throw error;
+    } finally {
+        await session.endSession();
     }
-
-
-    // Update MongoDB
-    const updatedInvoice =
-        await invoiceRepository.updateById(
-            userId,
-            invoiceId,
-            updatedData
-        );
-
-    if (!updatedInvoice) {
-
-        logger.error(
-            `Invoice update failed: ${invoiceId}`
-        );
-
-        throw new ApiError(
-            500,
-            translate(
-                "INVOICE.INVOICE_UPDATE_FAILED",
-                language
-            )
-        );
-    }
-
-
-    // Invalidate invoice cache
-    await redis.del(
-        `invoice:${invoiceId}:${userId}`
-    );
-
-
-    // Invalidate PDF cache
-    await redis.del(
-        `invoice:pdf:${userId}:${invoiceId}`
-    );
-
-
-    logger.info(
-        `Invoice updated successfully: ${invoiceId}`
-    );
-
-
-    return updatedInvoice;
 };
 
 
@@ -451,77 +352,50 @@ export const deleteInvoiceService = async (
 
 
 // Download Invoice PDF
-export const downloadInvoicePDFService = async (
-    userId,
-    invoiceId,
-    language = "en"
-) => {
+export const downloadInvoicePDFService = async (userId, invoiceId, language = "en") => {
+    
+    // 1. Check invoice exists first to get its invoiceNumber and updatedAt
+    const invoice = await invoiceRepository.findById(
+        userId,
+        invoiceId
+    );
 
-    const cacheKey =
-        `invoice:pdf:${userId}:${invoiceId}`;
+    if (!invoice) {
+        logger.warn(`PDF generation requested for non-existing invoice: ${invoiceId}`);
+        throw new ApiError(
+            404, translate("INVOICE.INVOICE_NOT_FOUND", language)
+        );
+    }
 
+    // 2. Put updatedAt in the cache key to prevent stale-cache race conditions
+    const cacheKey = `invoice:pdf:${userId}:${invoiceId}:${invoice.updatedAt.getTime()}`;
 
-    // Check PDF cache
-    const cachedPDF =
-        await redis.getBuffer(cacheKey);
+    // 3. Check PDF cache with the versioned key
+    const cachedPDF = await redis.getBuffer(cacheKey);
 
     if (cachedPDF) {
-
-        logger.info(
-            `Invoice PDF cache hit: ${invoiceId}`
-        );
+        logger.info(`Invoice PDF cache hit: ${invoiceId}`);
 
         return {
             pdfBuffer: cachedPDF,
-            invoiceNumber: invoiceId
+            invoiceNumber: invoice.invoiceNumber // Fixed: Returns real invoice number instead of ID
         };
     }
 
+    logger.info(`Invoice PDF cache miss: ${invoiceId}`);
 
-    logger.info(
-        `Invoice PDF cache miss: ${invoiceId}`
+    // 4. Add PDF generation job to queue (passing updatedAt if needed by worker)
+    const job = await invoicePDFQueue.add(
+        "generate-invoice-pdf",
+        {
+            userId: userId.toString(),
+            invoiceId: invoiceId.toString(),
+            updatedAtTime: invoice.updatedAt.getTime(),
+            language
+        }
     );
 
-
-    // Check invoice exists
-    const invoice =
-        await invoiceRepository.findById(
-            userId,
-            invoiceId
-        );
-
-    if (!invoice) {
-
-        logger.warn(
-            `PDF generation requested for non-existing invoice: ${invoiceId}`
-        );
-
-        throw new ApiError(
-            404,
-            translate(
-                "INVOICE.INVOICE_NOT_FOUND",
-                language
-            )
-        );
-    }
-
-
-    // Add PDF generation job
-    const job =
-        await invoicePDFQueue.add(
-            "generate-invoice-pdf",
-            {
-                userId: userId.toString(),
-                invoiceId: invoiceId.toString(),
-                language
-            }
-        );
-
-
-    logger.info(
-        `Invoice PDF generation job queued: ${job.id}`
-    );
-
+    logger.info(`Invoice PDF generation job queued: ${job.id}`);
 
     return {
         jobId: job.id,
@@ -593,118 +467,72 @@ export const sendInvoiceEmailService = async (
 
 
 // Duplicate Invoice
-export const duplicateInvoiceService = async (
-    userId,
-    invoiceId,
-    language = "en"
-) => {
+export const duplicateInvoiceService = async (userId, invoiceId, language = "en") => {
+    const session = await mongoose.startSession();
 
-    // Find original invoice
-    const invoice =
-        await invoiceRepository.findById(
-            userId,
-            invoiceId
-        );
+    try {
+        return await session.withTransaction(async () => {
+            // Find original invoice with session
+            const invoice = await invoiceRepository.findById(
+                userId,
+                invoiceId,
+                session
+            );
 
-    if (!invoice) {
+            if (!invoice) {
+                logger.warn(`Invoice duplication attempted for non-existing invoice: ${invoiceId}`);
+                throw new ApiError(404, translate("INVOICE.INVOICE_NOT_FOUND", language));
+            }
 
-        logger.warn(
-            `Invoice duplication attempted for non-existing invoice: ${invoiceId}`
-        );
+            // Generate next invoice number atomically with session (prevents sequence gaps)
+            const updatedBusiness = await businessRepository.incrementInvoiceNumber(
+                userId,
+                session
+            );
 
-        throw new ApiError(
-            404,
-            translate(
-                "INVOICE.INVOICE_NOT_FOUND",
-                language
-            )
-        );
+            if (!updatedBusiness) {
+                logger.warn(`Invoice duplication failed - business profile not found: ${userId}`);
+                throw new ApiError(404, translate("BUSINESS.BUSINESS_NOT_FOUND", language));
+            }
+
+            const invoiceNumber = `${updatedBusiness.invoicePrefix}-${updatedBusiness.nextInvoiceNumber}`;
+
+            const duplicateInvoice = invoice.toObject();
+
+            delete duplicateInvoice._id;
+            delete duplicateInvoice.__v;
+            delete duplicateInvoice.createdAt;
+            delete duplicateInvoice.updatedAt;
+
+            const paymentDuration = new Date(invoice.dueDate) - new Date(invoice.invoiceDate);
+
+            duplicateInvoice.invoiceNumber = invoiceNumber;
+            duplicateInvoice.status = "Draft";
+            duplicateInvoice.invoiceDate = new Date();
+            duplicateInvoice.dueDate = new Date(
+                duplicateInvoice.invoiceDate.getTime() +
+                paymentDuration
+            );
+
+            // Create duplicated invoice using session
+            const newInvoice = await invoiceRepository.create(
+                duplicateInvoice,
+                session
+            );
+
+            if (!newInvoice) {
+                logger.error(`Invoice duplication failed: ${invoiceId}`);
+                throw new ApiError(500, translate("INVOICE.INVOICE_CREATE_FAILED", language));
+            }
+
+            logger.info(`Invoice duplicated successfully: ${newInvoice._id}`);
+            return newInvoice;
+        });
+    } catch (error) {
+        logger.error(`Invoice duplication failed: ${error.message}`);
+        throw error;
+    } finally {
+        await session.endSession();
     }
-
-
-    // Generate next invoice number
-    const updatedBusiness =
-        await businessRepository.incrementInvoiceNumber(
-            userId
-        );
-
-    if (!updatedBusiness) {
-
-        logger.warn(
-            `Invoice duplication failed - business profile not found: ${userId}`
-        );
-
-        throw new ApiError(
-            404,
-            translate(
-                "BUSINESS.BUSINESS_NOT_FOUND",
-                language
-            )
-        );
-    }
-
-
-    const invoiceNumber =
-        `${updatedBusiness.invoicePrefix}-${updatedBusiness.invoiceStartNumber}`;
-
-
-    const duplicateInvoice =
-        invoice.toObject();
-
-
-    delete duplicateInvoice._id;
-    delete duplicateInvoice.__v;
-    delete duplicateInvoice.createdAt;
-    delete duplicateInvoice.updatedAt;
-
-
-    const paymentDuration =
-        new Date(invoice.dueDate) -
-        new Date(invoice.invoiceDate);
-
-
-    duplicateInvoice.invoiceNumber =
-        invoiceNumber;
-
-    duplicateInvoice.status =
-        "Draft";
-
-    duplicateInvoice.invoiceDate =
-        new Date();
-
-    duplicateInvoice.dueDate =
-        new Date(
-            duplicateInvoice.invoiceDate.getTime() +
-            paymentDuration
-        );
-
-
-    const newInvoice =
-        await invoiceRepository.create(
-            duplicateInvoice
-        );
-
-
-    if (!newInvoice) {
-
-        logger.error(
-            `Invoice duplication failed: ${invoiceId}`
-        );
-
-        throw new ApiError(
-            500,
-            translate(
-                "INVOICE.INVOICE_CREATE_FAILED",
-                language
-            )
-        );
-    }
-
-
-    logger.info(
-        `Invoice duplicated successfully: ${newInvoice._id}`
-    );
-
-
-    return newInvoice;
 };
+

@@ -1,18 +1,19 @@
-import express from "express";
-
+import { Router } from "express";
 import {
-    healthCheck,
     livenessCheck,
-    readinessCheck
+    readinessCheck,
+    healthCheck
 } from "../../controller/health/health.controller.js";
 
+const router = Router();
 
-const router = express.Router();
+// GET /api/v1/health/live -> Light liveness probe (Public container check)
+router.get("/live", livenessCheck);
 
-router.get("/health", healthCheck);
+// GET /api/v1/health/ready -> Detailed readiness check (Verifies MongoDB & Redis)
+router.get("/ready", readinessCheck);
 
-router.get("/health/live", livenessCheck);
-
-router.get("/health/ready", readinessCheck);
+// GET /api/v1/health -> Combined health check endpoint
+router.get("/", healthCheck);
 
 export default router;

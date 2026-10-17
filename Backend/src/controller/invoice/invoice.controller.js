@@ -195,8 +195,7 @@ export const getInvoicePDFStatus = TryCatch(async (req, res) => {
         jobId
     } = req.params;
 
-    const job =
-        await invoicePDFQueue.getJob(jobId);
+    const job =await invoicePDFQueue.getJob(jobId);
 
 
     if (!job) {

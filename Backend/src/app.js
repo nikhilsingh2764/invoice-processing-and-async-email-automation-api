@@ -4,7 +4,9 @@ import express from "express";
 import helmet from "helmet";
 import cors from "cors";
 import cookieParser from "cookie-parser";
-import morgan from "morgan";
+
+import i18next from "./config/i18n.js";
+import middleware from "i18next-http-middleware";
 
 import userRoutes from "./route/auth/user.routes.js";
 import tokenRoutes from "./route/auth/token.routes.js"
@@ -16,22 +18,23 @@ import dashboardRoutes from "./route/dashboard/dashboard.routes.js"
 
 import healthRouter from "./route/health/health.routes.js";
 import metricsRouter from "./route/metrics/metrics.routes.js";
-import metricsMiddleware from "./middleware/metrics.middleware.js";
 
+import metricsMiddleware from "./middleware/metrics.middleware.js";
+import errorMiddleware from "./middleware/error.middleware.js";
 
 import requestLogger from "./middleware/requestLogger.js";
 
-import errorMiddleware from "./middleware/error.middleware.js";
 
 import swaggerUi from "swagger-ui-express";
 import swaggerSpec from "./config/swagger.js";
 
 
 
+
 const app = express();
 
+
 app.use((req, res, next) => {
-    console.log("🔥 REQUEST ENTERED APP");
     next();
 });
 
@@ -58,17 +61,14 @@ app.use(
 app.use(express.json());
 
 
-// Parse URL-encoded Form Data and store in req.body
-app.use(express.urlencoded({ extended: true }));
 
+// Register Language Middleware EARLY (before routes)
+app.use(middleware.handle(i18next));
 
 // parses cookies from the request and stored in req.cookies.
 app.use(cookieParser());
 
 app.use(requestLogger);
-
-// HTTP Request Logger that logs HTTP requests for debugging and monitoring.
-app.use(morgan("dev"));
 
 
 app.use(metricsMiddleware);
@@ -76,7 +76,6 @@ app.use(metricsMiddleware);
 
 
 //routes handle here
-
 
 app.use('/api/v1', userRoutes);
 
@@ -92,7 +91,7 @@ app.use('/api/v1', invoiceRoutes);
 
 app.use('/api/v1/dashboard', dashboardRoutes);
 
-app.use("/api/v1", healthRouter);
+app.use("/api/v1/health", healthRouter);
 
 app.use("/api/v1", metricsRouter);
 
@@ -106,37 +105,18 @@ app.get("/health", (req, res) => {
 
 
 
-app.use(
-    "/api-docs",
-    swaggerUi.serve,
-    swaggerUi.setup(swaggerSpec)
-);
+if (process.env.NODE_ENV !== 'production') {
+    app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+} else {
+    app.use('/api-docs', (req, res) => {
+        res.status(403).json({ error: 'API documentation is disabled in production.' });
+    });
+}
+
 
 // Global Error Handler (ALWAYS LAST)
 app.use(errorMiddleware);
 
-
-
 export default app;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 

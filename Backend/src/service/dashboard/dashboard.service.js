@@ -1,5 +1,5 @@
 import redis from "../../config/redis.js";
-import dashboardRepository from "../../repository/dashboard/dashboard.repositroy.js"
+import dashboardRepository from "../../repository/dashboard/dashboard.repository.js"
 import logger from "../../utils/logger.js";
 
 
@@ -12,16 +12,12 @@ export const getDashboardService = async (userId, options) => {
     const cachedDashboard = await redis.get(cacheKey);
 
     if (cachedDashboard) {
-        logger.info(
-            `Dashboard cache hit: ${userId}`
-        );
+        logger.info(`Dashboard cache hit: ${userId}`);
 
         return JSON.parse(cachedDashboard);
     }
 
-    logger.info(
-        `Dashboard cache miss: ${userId}`
-    );
+    logger.info(`Dashboard cache miss: ${userId}`);
 
 
     // Fetch all dashboard data
@@ -69,12 +65,10 @@ export const getDashboardService = async (userId, options) => {
         cacheKey,
         JSON.stringify(dashboard),
         "EX",
-        600
+        60
     );
 
-    logger.info(
-        `Dashboard fetched from database and cached: ${userId}`
-    );
+    logger.info(`Dashboard fetched from database and cached: ${userId}`);
 
     return dashboard;
 

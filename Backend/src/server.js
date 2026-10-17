@@ -1,77 +1,106 @@
 import "dotenv/config";
 
+// Validate required environment variables at startup
+const requiredEnvVars = [
+    "MONGODB_URI",
+    "ACCESS_TOKEN_SECRET",
+    "REFRESH_TOKEN_SECRET",
+    "BREVO_API_KEY",
+    "EMAIL_USER",
+    "CLIENT_URL"
+];
+
+const missingEnvVars = requiredEnvVars.filter((key) => !process.env[key] || process.env[key].trim() === "");
+if (missingEnvVars.length > 0) {
+    console.error(`❌ Startup Error: Missing required environment variables in .env: ${missingEnvVars.join(", ")}`);
+    process.exit(1);
+}
+
 import app from "./app.js";
 import connectDB from "./config/db.js";
 
-
+import { overdueQueue,scheduleOverdueJob } from "./queues/overdue.queue.js";
+import overdueWorker from "./worker/overdue.worker.js";
 import emailWorker from "./worker/email.worker.js";
 import invoicePDFWorker from "./worker/invoicePDF.worker.js";
 import invoiceEmailWorker from "./worker/invoiceEmail.worker.js";
-
 import redis from "./config/redis.js";
-
 import gracefulShutdown from "./utils/gracefulShutdown.js";
 
-const PORT=process.env.PORT || 5000;
+
+import logger from "./utils/logger.js";
+
+
+// ==========================================
+// Process-Level Error Handlers
+// ==========================================
+process.on("uncaughtException", (error) => {
+    logger.error({
+        message: "Uncaught Exception detected! Shutting down process...",
+        error: error.message,
+        stack: error.stack
+    });
+    process.exit(1);
+});
+
+process.on("unhandledRejection", (reason, promise) => {
+    logger.error({
+        message: "Unhandled Promise Rejection detected! Shutting down process...",
+        reason: reason?.message || reason,
+        stack: reason?.stack
+    });
+    process.exit(1);
+});
+
+
+const PORT = process.env.PORT || 5000;
+
+
 const startServer = async () => {
 
     try {
 
         await connectDB();
 
-        const server = app.listen(PORT, "0.0.0.0", () => {  //method in express that starts the server 
-            console.log(`server is running at port ${PORT} `);
-            console.log(`http://localhost:${PORT}`);
+        const server = app.listen(PORT, "0.0.0.0", () => {
+            logger.info(`server is running at port ${PORT} `);
+            logger.info(`http://localhost:${PORT}`);
         });
 
-        // Graceful shutdown on deployment
-        process.on("SIGINT", () => {
+
+        await scheduleOverdueJob();
+
+        // Bundle your workers array
+        const workers = [emailWorker, invoicePDFWorker, invoiceEmailWorker, overdueWorker];
+        
+        // Shutdown trigger handler
+        const shutdownHandler = (signal) => {
+
+            logger.info(`Received ${signal}.`);
+
             gracefulShutdown({
                 server,
                 redis,
-                workers: [
-                    emailWorker,
-                    invoicePDFWorker,
-                    invoiceEmailWorker
-                ]
-
+                workers
+            }).catch((err) => {
+                logger.error(`Error during graceful shutdown: ${err.message}`);
+                process.exit(1);
             });
 
-        });
+        };
 
-        // Graceful shutdown on Ctrl + C 
-        process.on("SIGINT", () => {
-            gracefulShutdown({
-                server,
-                redis,
-                workers: [
-                    emailWorker,
-                    invoicePDFWorker,
-                    invoiceEmailWorker
-                ]
-            });
-
-        });
+        // Register signals
+        process.on("SIGTERM", () => shutdownHandler("SIGTERM"));
+        process.on("SIGINT", () => shutdownHandler("SIGINT"));
 
 
     } catch (error) {
 
-        console.error("Server failed to start:", error.message);
+        logger.error("Server failed to start:", error.message);
+        process.exit(1);
 
     }
-
-
 
 };
 
 startServer();
-
-
-
-
-
-
-
-
-
-

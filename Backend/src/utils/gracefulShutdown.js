@@ -5,11 +5,7 @@ import logger from "./logger.js";
 let isShuttingDown = false;
 
 
-const gracefulShutdown = async ({
-    server,
-    redis,
-    workers = []
-}) => {
+const gracefulShutdown = async ({server,redis,workers = []}) => {
 
     // Prevent multiple shutdown calls
     if (isShuttingDown) {
@@ -36,19 +32,17 @@ const gracefulShutdown = async ({
 
     // 3. Close Redis
     await redis.quit();
-
     logger.info("Redis connection closed");
 
 
     // 4. Close MongoDB
     await mongoose.connection.close();
-
     logger.info("MongoDB connection closed");
 
 
     logger.info("Graceful shutdown completed");
-
     process.exit(0);
+
 };
 
 

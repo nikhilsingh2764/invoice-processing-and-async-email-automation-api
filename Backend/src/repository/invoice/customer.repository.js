@@ -7,10 +7,27 @@ class CustomerRepository {
         return await Customer.create(customerData);
     }
 
-
+ 
     // Get All Customers
-    async findAll(userId) {
-        return await Customer.find({ userId });
+    //async findAll(userId) {
+   //     return await Customer.find({ userId });
+   // }
+
+
+
+    // Get All Customers (with support for userId, search, filtering, skip, limit)
+    async findAll(query = {}, skip = 0, limit = 10) {
+        return await Customer.find(query)
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit);
+    }
+
+
+
+    // Count documents matching the query (for pagination metadata)
+    async countDocuments(query = {}) {
+        return await Customer.countDocuments(query);
     }
 
 

@@ -1,15 +1,37 @@
 import Redis from "ioredis";
+import logger from "../utils/logger.js";
 
-const redisUrl = process.env.REDIS_URL;
-
-console.log("Connecting to Redis at:", redisUrl);
+const redisUrl = process.env.REDIS_URL || "redis://localhost:6379";
 
 const redis = new Redis(redisUrl, {
     maxRetriesPerRequest: null,
-    enableReadyCheck: false, // Required for BullMQ
+    enableReadyCheck: false,
+    keepAlive: 30000,
+    retryStrategy(times) {
+        return Math.min(times * 100, 2000);
+    },
 });
 
-redis.on("connect", () => console.log("Redis connected successfully"));
-redis.on("error", (err) => console.error("Redis connection error:", err));
+// Attach error handler immediately to prevent uncaught exception crashes
+redis.on("error", (err) => {
+    if (["ECONNRESET", "EPIPE", "ETIMEDOUT", "ECONNREFUSED"].includes(err.code)) {
+        return; // Silently ignore network drops
+    }
+    logger.error({ message: "Redis connection error", error: err.message });
+});
+
+redis.on("ready", () => {
+    logger.info("Redis connected successfully");
+});
+
+// Catch any stray unhandled socket errors from BullMQ internal client streams globally
+process.on('uncaughtException', (err) => {
+    if (err.code === 'EPIPE' || err.code === 'ECONNRESET') {
+        return; // Suppress background Redis socket drops safely
+    }
+    // Re-throw other critical uncaught exceptions
+    console.error(err);
+    process.exit(1);
+});
 
 export default redis;

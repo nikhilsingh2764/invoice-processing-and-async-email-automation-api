@@ -190,8 +190,6 @@ const invoiceSchema = new mongoose.Schema({
     invoiceNumber: {
         type: String,
         required: true,
-        unique: true,
-        index: true,
         trim: true
     },
 
@@ -246,6 +244,12 @@ const invoiceSchema = new mongoose.Schema({
         default: "Pending"
     },
 
+    sent: {
+        type: Boolean,
+        default: false,
+        required: true
+    },
+
     paymentMethod: {
         type: String,
         enum: [
@@ -274,6 +278,13 @@ const invoiceSchema = new mongoose.Schema({
     timestamps: true
 });
 
+invoiceSchema.index({ userId: 1, invoiceNumber: 1 }, { unique: true });
+
+invoiceSchema.index({ userId: 1, createdAt: -1 });
+invoiceSchema.index({ userId: 1, status: 1 });
+invoiceSchema.index({ userId: 1, "customer.customerName": 1 });
+
+
 const Invoice = mongoose.model("Invoice", invoiceSchema);
 
-export default Invoice;
+export default Invoice; 
