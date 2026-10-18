@@ -1,28 +1,24 @@
-import express from 'express';
+import express from "express";
 
-import validate from '../../middleware/validate.js';
+import validate from "../../middleware/validate.js";
 
-import authMiddleware from '../../middleware/auth.middleware.js';
+import authMiddleware from "../../middleware/auth.middleware.js";
 
 import {
     createBusinessValidator,
-    updateBusinessValidator
-} from '../../validators/business.validator.js';
+    updateBusinessValidator,
+} from "../../validators/business.validator.js";
 
 import {
     createBusiness,
     getBusinessProfile,
     updateBusiness,
-    deleteBusiness
-} from '../../controller/invoice/business.controller.js';
+    deleteBusiness,
+} from "../../controller/invoice/business.controller.js";
 
-import {
-    businessLimiter
-} from '../../middleware/rateLimiter.middleware.js';
-
+import { businessLimiter } from "../../middleware/rateLimiter.middleware.js";
 
 const router = express.Router();
-
 
 /**
  * @swagger
@@ -30,7 +26,6 @@ const router = express.Router();
  *   - name: Business
  *     description: Business profile management
  */
-
 
 /**
  * @swagger
@@ -198,7 +193,6 @@ router.post(
     createBusiness
 );
 
-
 /**
  * @swagger
  * /business:
@@ -224,12 +218,7 @@ router.post(
  *       500:
  *         description: Internal server error
  */
-router.get(
-    "/business",
-    authMiddleware,
-    getBusinessProfile
-);
-
+router.get("/business", authMiddleware, getBusinessProfile);
 
 /**
  * @swagger
@@ -256,13 +245,7 @@ router.get(
  *       500:
  *         description: Internal server error
  */
-router.delete(
-    "/business",
-    businessLimiter,
-    authMiddleware,
-    deleteBusiness
-);
-
+router.delete("/business", businessLimiter, authMiddleware, deleteBusiness);
 
 /**
  * @swagger
@@ -416,6 +399,5 @@ router.patch(
     validate,
     updateBusiness
 );
-
 
 export default router;

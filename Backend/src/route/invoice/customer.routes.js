@@ -1,29 +1,25 @@
-import authMiddleware from '../../middleware/auth.middleware.js';
+import authMiddleware from "../../middleware/auth.middleware.js";
 
 import express from "express";
 
 import {
     createCustomerValidator,
-    updateCustomerValidator
-} from '../../validators/customer.validator.js';
+    updateCustomerValidator,
+} from "../../validators/customer.validator.js";
 
-import validate from '../../middleware/validate.js';
+import validate from "../../middleware/validate.js";
 
-import {
-    CustomerLimiter
-} from '../../middleware/rateLimiter.middleware.js';
+import { CustomerLimiter } from "../../middleware/rateLimiter.middleware.js";
 
 import {
     createCustomer,
     getAllCustomers,
     getCustomerById,
     updateCustomer,
-    deleteCustomer
-} from '../../controller/invoice/customer.controller.js';
-
+    deleteCustomer,
+} from "../../controller/invoice/customer.controller.js";
 
 const router = express.Router();
-
 
 /**
  * @swagger
@@ -31,7 +27,6 @@ const router = express.Router();
  *   - name: Customer
  *     description: Customer management
  */
-
 
 /**
  * @swagger
@@ -181,14 +176,13 @@ const router = express.Router();
  *         description: Internal server error
  */
 router.post(
-    '/customer',
+    "/customer",
     CustomerLimiter,
     authMiddleware,
     createCustomerValidator,
     validate,
     createCustomer
 );
-
 
 /**
  * @swagger
@@ -215,12 +209,7 @@ router.post(
  *       500:
  *         description: Internal server error
  */
-router.get(
-    '/customer',
-    authMiddleware,
-    getAllCustomers
-);
-
+router.get("/customer", authMiddleware, getAllCustomers);
 
 /**
  * @swagger
@@ -259,12 +248,7 @@ router.get(
  *       500:
  *         description: Internal server error
  */
-router.get(
-    '/customer/:id',
-    authMiddleware,
-    getCustomerById
-);
-
+router.get("/customer/:id", authMiddleware, getCustomerById);
 
 /**
  * @swagger
@@ -411,14 +395,13 @@ router.get(
  *         description: Internal server error
  */
 router.patch(
-    '/customer/:id',
+    "/customer/:id",
     CustomerLimiter,
     authMiddleware,
     updateCustomerValidator,
     validate,
     updateCustomer
 );
-
 
 /**
  * @swagger
@@ -457,12 +440,6 @@ router.patch(
  *       500:
  *         description: Internal server error
  */
-router.delete(
-    '/customer/:id',
-    CustomerLimiter,
-    authMiddleware,
-    deleteCustomer
-);
-
+router.delete("/customer/:id", CustomerLimiter, authMiddleware, deleteCustomer);
 
 export default router;

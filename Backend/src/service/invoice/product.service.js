@@ -3,38 +3,21 @@ import productRepository from "../../repository/invoice/product.repository.js";
 import logger from "../../utils/logger.js";
 import translate from "../../utils/translate.js";
 
-export const createProductService = async (
-    productData,
-    language = "en"
-) => {
+export const createProductService = async (productData, language = "en") => {
     const product = await productRepository.create(productData);
 
     if (!product) {
-        logger.error(
-            `Product creation failed: ${productData.userId}`
-        );
+        logger.error(`Product creation failed: ${productData.userId}`);
 
-        throw new ApiError(
-            500,
-            translate(
-                "PRODUCT.PRODUCT_CREATE_FAILED",
-                language
-            )
-        );
+        throw new ApiError(500, translate("PRODUCT.PRODUCT_CREATE_FAILED", language));
     }
 
-    logger.info(
-        `Product created successfully: ${product._id}`
-    );
+    logger.info(`Product created successfully: ${product._id}`);
 
     return product;
 };
 
-export const getAllProductsService = async (
-    userId,
-    queryFilters = {},
-    language = "en"
-) => {
+export const getAllProductsService = async (userId, queryFilters = {}, language = "en") => {
     // 1. Parse and sanitize pagination inputs
     const page = Math.max(1, parseInt(queryFilters.page, 10) || 1);
     const limit = Math.max(1, Math.min(100, parseInt(queryFilters.limit, 10) || 10));
@@ -47,19 +30,17 @@ export const getAllProductsService = async (
     if (queryFilters.search) {
         query.$or = [
             { productName: { $regex: queryFilters.search, $options: "i" } },
-            { description: { $regex: queryFilters.search, $options: "i" } }
+            { description: { $regex: queryFilters.search, $options: "i" } },
         ];
     }
 
     // 4. Execute queries concurrently
     const [products, total] = await Promise.all([
         productRepository.findAll(query, skip, limit),
-        productRepository.countDocuments(query)
+        productRepository.countDocuments(query),
     ]);
 
-    logger.info(
-        `Products fetched successfully: ${userId} (Page: ${page})`
-    );
+    logger.info(`Products fetched successfully: ${userId} (Page: ${page})`);
 
     const totalPages = Math.ceil(total / limit);
 
@@ -71,61 +52,30 @@ export const getAllProductsService = async (
             limit,
             pages: totalPages,
             hasNextPage: page < totalPages,
-            hasPrevPage: page > 1
-        }
+            hasPrevPage: page > 1,
+        },
     };
 };
 
-export const getProductByIdService = async (
-    productId,
-    userId,
-    language = "en"
-) => {
-    const product = await productRepository.findByIdAndUserId(
-        productId,
-        userId
-    );
+export const getProductByIdService = async (productId, userId, language = "en") => {
+    const product = await productRepository.findByIdAndUserId(productId, userId);
 
     if (!product) {
-        logger.warn(
-            `Product not found: ${productId}`
-        );
+        logger.warn(`Product not found: ${productId}`);
 
-        throw new ApiError(
-            404,
-            translate(
-                "PRODUCT.PRODUCT_NOT_FOUND",
-                language
-            )
-        );
+        throw new ApiError(404, translate("PRODUCT.PRODUCT_NOT_FOUND", language));
     }
 
     return product;
 };
 
-export const updateProductService = async (
-    productId,
-    userId,
-    updateData,
-    language = "en"
-) => {
-    const product = await productRepository.findByIdAndUserId(
-        productId,
-        userId
-    );
+export const updateProductService = async (productId, userId, updateData, language = "en") => {
+    const product = await productRepository.findByIdAndUserId(productId, userId);
 
     if (!product) {
-        logger.warn(
-            `Product update attempted for non-existing product: ${productId}`
-        );
+        logger.warn(`Product update attempted for non-existing product: ${productId}`);
 
-        throw new ApiError(
-            404,
-            translate(
-                "PRODUCT.PRODUCT_NOT_FOUND",
-                language
-            )
-        );
+        throw new ApiError(404, translate("PRODUCT.PRODUCT_NOT_FOUND", language));
     }
 
     const updatedProduct = await productRepository.updateByIdAndUserId(
@@ -135,58 +85,28 @@ export const updateProductService = async (
     );
 
     if (!updatedProduct) {
-        logger.error(
-            `Product update failed: ${productId}`
-        );
+        logger.error(`Product update failed: ${productId}`);
 
-        throw new ApiError(
-            500,
-            translate(
-                "PRODUCT.PRODUCT_UPDATE_FAILED",
-                language
-            )
-        );
+        throw new ApiError(500, translate("PRODUCT.PRODUCT_UPDATE_FAILED", language));
     }
 
-    logger.info(
-        `Product updated successfully: ${productId}`
-    );
+    logger.info(`Product updated successfully: ${productId}`);
 
     return updatedProduct;
 };
 
-export const deleteProductService = async (
-    productId,
-    userId,
-    language = "en"
-) => {
-    const product = await productRepository.findByIdAndUserId(
-        productId,
-        userId
-    );
+export const deleteProductService = async (productId, userId, language = "en") => {
+    const product = await productRepository.findByIdAndUserId(productId, userId);
 
     if (!product) {
-        logger.warn(
-            `Product deletion attempted for non-existing product: ${productId}`
-        );
+        logger.warn(`Product deletion attempted for non-existing product: ${productId}`);
 
-        throw new ApiError(
-            404,
-            translate(
-                "PRODUCT.PRODUCT_NOT_FOUND",
-                language
-            )
-        );
+        throw new ApiError(404, translate("PRODUCT.PRODUCT_NOT_FOUND", language));
     }
 
-    await productRepository.deleteByIdAndUserId(
-        productId,
-        userId
-    );
+    await productRepository.deleteByIdAndUserId(productId, userId);
 
-    logger.info(
-        `Product deleted successfully: ${productId}`
-    );
+    logger.info(`Product deleted successfully: ${productId}`);
 
     return null;
 };

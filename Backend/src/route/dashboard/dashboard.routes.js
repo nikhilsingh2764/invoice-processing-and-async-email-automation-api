@@ -21,7 +21,6 @@ const router = express.Router();
 // - Recent Invoices
 // ============================================================
 
-
 /**
  * @swagger
  * /:
@@ -95,12 +94,6 @@ const router = express.Router();
  *         description: Internal server error
  */
 
-
-router.get(
-    "/",
-    authMiddleware,
-    getDashboard
-);
-
+router.get("/", authMiddleware, getDashboard);
 
 export default router;

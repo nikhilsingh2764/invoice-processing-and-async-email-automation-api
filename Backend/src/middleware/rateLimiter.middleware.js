@@ -1,7 +1,6 @@
-import { rateLimit, ipKeyGenerator } from 'express-rate-limit';
+import { rateLimit, ipKeyGenerator } from "express-rate-limit";
 import { RedisStore } from "rate-limit-redis"; //store rate limit data inside redis instead of node memory
 import redis from "../config/redis.js"; //redis client connection
-
 
 // reusable Redis Store
 const createStore = (prefix) =>
@@ -10,11 +9,8 @@ const createStore = (prefix) =>
         prefix, //keeps different limiters like login signup separeated in redis
     });
 
-
-
 //----------------------------------------------------------------------------------------------------------------------------------------------------
 //Auth API limiter
-
 
 // ==============================
 // Login Limiter
@@ -23,8 +19,8 @@ const createStore = (prefix) =>
 
 export const loginLimiter = rateLimit({
     store: createStore("login:"),
-    windowMs: 1 * 60 * 1000,  // 1 min
-    max: 5,  // maximum 5 requests
+    windowMs: 1 * 60 * 1000, // 1 min
+    max: 5, // maximum 5 requests
     standardHeaders: true,
     legacyHeaders: false,
     keyGenerator: (req) => {
@@ -38,8 +34,6 @@ export const loginLimiter = rateLimit({
     },
 });
 
-
-
 // ==============================
 // Signup Limiter
 // 3 requests / 1 hour
@@ -47,7 +41,7 @@ export const loginLimiter = rateLimit({
 
 export const signupLimiter = rateLimit({
     store: createStore("signup:"),
-    windowMs: 60 * 60 * 1000, // 1 hr 
+    windowMs: 60 * 60 * 1000, // 1 hr
     max: 3,
     standardHeaders: true,
     legacyHeaders: false,
@@ -57,10 +51,6 @@ export const signupLimiter = rateLimit({
     },
 });
 
-
-
-
-
 // ==============================
 // Verify OTP Limiter
 // 10 requests / 15 minutes (IP + Email)
@@ -69,7 +59,7 @@ export const signupLimiter = rateLimit({
 export const verifyOtpLimiter = rateLimit({
     store: createStore("verifyOtp:"),
     windowMs: 15 * 60 * 1000, // 15 min
-    max: 10,  // 10 requests 
+    max: 10, // 10 requests
     standardHeaders: true,
     legacyHeaders: false,
     keyGenerator: (req) => {
@@ -82,9 +72,6 @@ export const verifyOtpLimiter = rateLimit({
         message: "Too many OTP verification attempts.",
     },
 });
-
-
-
 
 // ==============================
 // Forgot Password Limiter
@@ -105,9 +92,8 @@ export const forgotPasswordLimiter = rateLimit({
     message: {
         success: false,
         message: "Too many password reset requests.",
-    }
+    },
 });
-
 
 // ==============================
 // Refresh Token Limiter
@@ -122,10 +108,9 @@ export const refreshTokenLimiter = rateLimit({
     legacyHeaders: false,
     message: {
         success: false,
-        message: "Too many refresh requests."
-    }
+        message: "Too many refresh requests.",
+    },
 });
-
 
 // ==============================
 // General API Limiter
@@ -145,10 +130,6 @@ export const apiLimiter = rateLimit({
     },
 });
 
-
-
-
-
 //----------------------------------------------------------------------------------------------------------------------------------------------------
 // Business API Limiter
 // Create/Update/Delete Business
@@ -164,9 +145,6 @@ export const businessLimiter = rateLimit({
         message: "Too many requests. Please try again later.",
     },
 });
-
-
-
 
 //----------------------------------------------------------------------------------------------------------------------------------------------------
 // product API Limiter
@@ -184,7 +162,6 @@ export const ProductLimiter = rateLimit({
     },
 });
 
-
 //----------------------------------------------------------------------------------------------------------------------------------------------------
 // Customer API Limiter
 // Create/Update/Delete Customer
@@ -201,17 +178,12 @@ export const CustomerLimiter = rateLimit({
     },
 });
 
-
-
-
-
-
 //----------------------------------------------------------------------------------------------------------------------------------------------------
 // invoice API Limiter
 
 const rateLimitMessage = {
     success: false,
-    message: "Too many requests. Please try again later."
+    message: "Too many requests. Please try again later.",
 };
 
 export const invoiceCreateLimiter = rateLimit({
@@ -220,69 +192,59 @@ export const invoiceCreateLimiter = rateLimit({
     max: 30,
     standardHeaders: true,
     legacyHeaders: false,
-    message: rateLimitMessage
+    message: rateLimitMessage,
 });
 
-
-
-export const invoiceReadLimiter = rateLimit ({
+export const invoiceReadLimiter = rateLimit({
     store: createStore("invoice:read:"),
     windowMs: 15 * 60 * 1000,
     max: 300,
     standardHeaders: true,
     legacyHeaders: false,
-    message: rateLimitMessage
+    message: rateLimitMessage,
 });
 
-
-export const invoiceUpdateLimiter = rateLimit ({
+export const invoiceUpdateLimiter = rateLimit({
     store: createStore("invoice:update:"),
     windowMs: 15 * 60 * 1000,
     max: 100,
     standardHeaders: true,
     legacyHeaders: false,
-    message: rateLimitMessage
+    message: rateLimitMessage,
 });
 
-
-export const invoiceDeleteLimiter = rateLimit ({
+export const invoiceDeleteLimiter = rateLimit({
     store: createStore("invoice:delete:"),
     windowMs: 15 * 60 * 1000,
     max: 20,
     standardHeaders: true,
     legacyHeaders: false,
-    message: rateLimitMessage
+    message: rateLimitMessage,
 });
 
-
-export const invoiceEmailLimiter = rateLimit ({
+export const invoiceEmailLimiter = rateLimit({
     store: createStore("invoice:email:"),
     windowMs: 60 * 60 * 1000,
     max: 15,
     standardHeaders: true,
     legacyHeaders: false,
-    message: rateLimitMessage
+    message: rateLimitMessage,
 });
 
-
-
-export const invoicePdfLimiter = rateLimit ({
+export const invoicePdfLimiter = rateLimit({
     store: createStore("invoice:pdf:"),
     windowMs: 60 * 60 * 1000,
     max: 15,
     standardHeaders: true,
     legacyHeaders: false,
-    message: rateLimitMessage
+    message: rateLimitMessage,
 });
 
-
-
-
-export const invoiceDuplicateLimiter = rateLimit ({
+export const invoiceDuplicateLimiter = rateLimit({
     store: createStore("invoice:duplicate:"),
     windowMs: 15 * 60 * 1000,
     max: 15,
     standardHeaders: true,
     legacyHeaders: false,
-    message: rateLimitMessage
+    message: rateLimitMessage,
 });

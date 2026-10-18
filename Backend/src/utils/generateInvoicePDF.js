@@ -7,7 +7,7 @@ const generateInvoicePDF = (invoice) => {
         size: "A4",
         margin: 36,
         autoFirstPage: true,
-        info: { Title: `Invoice ${invoice?.invoiceNumber || ""}` }
+        info: { Title: `Invoice ${invoice?.invoiceNumber || ""}` },
     });
 
     const buffers = [];

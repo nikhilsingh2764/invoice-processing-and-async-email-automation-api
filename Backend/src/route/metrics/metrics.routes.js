@@ -1,6 +1,6 @@
 import express from "express";
 import { getMetrics } from "../../controller/metrics/metrics.controller.js";
-import { metricsAuth } from '../../middleware/metricsAuth.middleware.js';
+import { metricsAuth } from "../../middleware/metricsAuth.middleware.js";
 
 const router = express.Router();
 

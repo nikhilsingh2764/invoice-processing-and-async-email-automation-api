@@ -7,43 +7,35 @@ const options = {
         info: {
             title: "Invoice API",
             version: "1.0.0",
-            description:
-                "Production-oriented API documentation for the Invoice Management API"
+            description: "Production-oriented API documentation for the Invoice Management API",
         },
 
         servers: [
             {
-                url: "https://backend-api-lbvm.onrender.com/api/v1"
-            }
+                url: "https://backend-api-lbvm.onrender.com/api/v1",
+            },
         ],
 
         components: {
-
             securitySchemes: {
-
                 accessTokenCookie: {
                     type: "apiKey",
                     in: "cookie",
                     name: "accessToken",
-                    description: "JWT access token stored in an HTTP cookie."
+                    description: "JWT access token stored in an HTTP cookie.",
                 },
 
                 refreshTokenCookie: {
                     type: "apiKey",
                     in: "cookie",
                     name: "refreshToken",
-                    description: "JWT refresh token stored in an HTTP cookie."
-                }
-
-
-            }
-        }
+                    description: "JWT refresh token stored in an HTTP cookie.",
+                },
+            },
+        },
     },
 
-
-    apis: [
-        "./src/route/**/*.routes.js"
-    ]
+    apis: ["./src/route/**/*.routes.js"],
 };
 
 const swaggerSpec = swaggerJSDoc(options);

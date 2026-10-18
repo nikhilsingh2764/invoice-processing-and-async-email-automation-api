@@ -1,8 +1,8 @@
-import ApiError from '../../utils/ApiError.js';
-import bcrypt from 'bcrypt';
+import ApiError from "../../utils/ApiError.js";
+import bcrypt from "bcrypt";
 import redis from "../../config/redis.js";
 
-import userRepository from '../../repository/auth/user.repository.js';
+import userRepository from "../../repository/auth/user.repository.js";
 import refreshTokenRepository from "../../repository/auth/refreshToken.repository.js";
 
 import { emailQueue } from "../../queues/email.queue.js";
@@ -12,14 +12,15 @@ import generateToken from "../../utils/generateToken.js";
 
 import welcomeTemplate from "../../templates/welcome.template.js";
 
-import translate from '../../utils/translate.js';
-import logger from '../../utils/logger.js';
-import crypto from "crypto";
+import translate from "../../utils/translate.js";
+import logger from "../../utils/logger.js";
+import hashToken from "../../utils/hashToken.js";
 
-import Business from '../../model/invoice/Business.model.js';
-import Customer from '../../model/invoice/customer.model.js';
-import Product from '../../model/invoice/product.model.js';
-import Invoice from '../../model/invoice/invoice.model.js';
+
+import Business from "../../model/invoice/Business.model.js";
+import Customer from "../../model/invoice/customer.model.js";
+import Product from "../../model/invoice/product.model.js";
+import Invoice from "../../model/invoice/invoice.model.js";
 
 
 const SALT_ROUNDS = 10;
@@ -29,7 +30,6 @@ const SALT_ROUNDS = 10;
 // =========================
 
 export const SignupService = async (userdata, language = "en") => {
-
     let { username, email, password } = userdata;
 
     // Sanitize data
@@ -39,14 +39,12 @@ export const SignupService = async (userdata, language = "en") => {
     // Check email exists
     const emailExist = await userRepository.emailExist(email);
 
-
     if (emailExist) {
         logger.info(`Signup attempted with existing email (generic response returned): ${email}`);
         return {
-            email
+            email,
         };
     }
-
 
     // Check username exists
     const usernameExist = await userRepository.usernameExist(username);
@@ -59,15 +57,14 @@ export const SignupService = async (userdata, language = "en") => {
         username,
         email,
         password,
-        type: "EMAIL_VERIFICATION"
+        type: "EMAIL_VERIFICATION",
     });
 
     logger.info(`Signup OTP generated and email queued for: ${email}`);
 
     return {
-        email
+        email,
     };
-
 };
 
 // =========================
@@ -75,7 +72,6 @@ export const SignupService = async (userdata, language = "en") => {
 // =========================
 
 export const VerifyOTPService = async ({ email, otp }, language = "en") => {
-
     email = email.trim().toLowerCase();
 
     const key = `otp:EMAIL_VERIFICATION:${email}`;
@@ -92,38 +88,41 @@ export const VerifyOTPService = async ({ email, otp }, language = "en") => {
     }
 
     if (otpData.attempts >= 5) {
-
         await redis.del(key);
         logger.warn(`OTP blocked due to max failed attempts for: ${email}`);
-        throw new ApiError(400, translate("AUTH.OTP_LOCKED", language) || "Too many failed attempts. OTP has been invalidated.");
-
+        throw new ApiError(
+            400,
+            translate("AUTH.OTP_LOCKED", language) ||
+                "Too many failed attempts. OTP has been invalidated."
+        );
     }
 
     const isMatch = await bcrypt.compare(String(otp), otpData.otp);
 
-
     if (!isMatch) {
-
         otpData.attempts += 1;
 
         if (otpData.attempts >= 5) {
             await redis.del(key);
             logger.warn(`OTP invalidated after 5 failed attempts for: ${email}`);
-            throw new ApiError(400, translate("AUTH.OTP_LOCKED", language) || "Too many failed attempts. OTP has been invalidated.");
+            throw new ApiError(
+                400,
+                translate("AUTH.OTP_LOCKED", language) ||
+                    "Too many failed attempts. OTP has been invalidated."
+            );
         } else {
             await redis.set(key, JSON.stringify(otpData), "KEEPTTL");
         }
 
         logger.warn(`Invalid email verification OTP attempt (${otpData.attempts}/5): ${email}`);
         throw new ApiError(400, translate("AUTH.INVALID_OTP", language));
-
     }
 
     const user = await userRepository.create({
         email: otpData.email,
         username: otpData.username,
         password: otpData.password,
-        isVerified: true
+        isVerified: true,
     });
 
     logger.info(`User created successfully: ${user._id}`);
@@ -137,9 +136,16 @@ export const VerifyOTPService = async ({ email, otp }, language = "en") => {
                 to: user.email,
                 subject: translate("AUTH.WELCOME_SUBJECT", language) || "Successful verification",
                 html: welcomeTemplate(user.username),
-                language
+                language,
             },
-            { jobId: `welcome-${user._id}` }
+            {
+                jobId: `welcome-${user._id}`,
+                attempts: 3,
+                backoff: {
+                    type: "exponential",
+                    delay: 2000,
+                },
+            }
         );
     } catch (err) {
         logger.error(`Failed to queue welcome email for user ${user._id}: ${err.message}`);
@@ -153,7 +159,6 @@ export const VerifyOTPService = async ({ email, otp }, language = "en") => {
 // =========================
 
 export const LoginService = async (userdata, language = "en") => {
-
     let { email, password } = userdata;
     email = email.trim().toLowerCase();
 
@@ -204,7 +209,7 @@ export const LoginService = async (userdata, language = "en") => {
 
         await userRepository.updateProfile(user._id, {
             failedLoginAttempts: user.failedLoginAttempts,
-            lockUntil: user.lockUntil
+            lockUntil: user.lockUntil,
         });
 
         logger.warn(`Login failed - incorrect password: ${user._id}`);
@@ -214,7 +219,7 @@ export const LoginService = async (userdata, language = "en") => {
     if (user.failedLoginAttempts > 0 || user.lockUntil) {
         await userRepository.updateProfile(user._id, {
             failedLoginAttempts: 0,
-            lockUntil: null
+            lockUntil: null,
         });
     }
 
@@ -232,8 +237,8 @@ export const LoginService = async (userdata, language = "en") => {
 
     await refreshTokenRepository.create({
         userId: user._id,
-        token: refreshToken,
-        expiresAt: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000)
+        tokenHash: hashToken(refreshToken),
+        expiresAt: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000),
     });
 
     logger.info(`User logged in successfully: ${user._id}`);
@@ -242,10 +247,10 @@ export const LoginService = async (userdata, language = "en") => {
         user: {
             email: user.email,
             username: user.username,
-            id: user._id
+            id: user._id,
         },
         accessToken,
-        refreshToken
+        refreshToken,
     };
 };
 
@@ -254,7 +259,6 @@ export const LoginService = async (userdata, language = "en") => {
 // =========================
 
 export const ProfileService = async (userId, language = "en") => {
-
     const cachekey = `profile:${userId}`;
     const cacheProfile = await redis.get(cachekey);
 
@@ -279,10 +283,10 @@ export const ProfileService = async (userId, language = "en") => {
         isVerified: user.isVerified,
         isActive: user.isActive,
         createdAt: user.createdAt,
-        updatedAt: user.updatedAt
+        updatedAt: user.updatedAt,
     };
 
-    await redis.set(cachekey, JSON.stringify(profile), 'EX', 300);
+    await redis.set(cachekey, JSON.stringify(profile), "EX", 300);
 
     logger.info(`Profile fetched from database and cached: ${userId}`);
 
@@ -294,14 +298,12 @@ export const ProfileService = async (userId, language = "en") => {
 // =========================
 
 export const LogoutService = async (refreshToken, language = "en") => {
-
     if (refreshToken) {
         await refreshTokenRepository.deleteByToken(refreshToken);
     }
 
     logger.info(`User logged out successfully`);
     return null;
-
 };
 
 // =========================
@@ -309,7 +311,6 @@ export const LogoutService = async (refreshToken, language = "en") => {
 // =========================
 
 export const UpdateProfileService = async (userId, data, language = "en") => {
-
     const { username } = data;
 
     if (username) {
@@ -337,7 +338,7 @@ export const UpdateProfileService = async (userId, data, language = "en") => {
         isVerified: updatedUser.isVerified,
         isActive: updatedUser.isActive,
         createdAt: updatedUser.createdAt,
-        updatedAt: updatedUser.updatedAt
+        updatedAt: updatedUser.updatedAt,
     };
 };
 
@@ -346,7 +347,6 @@ export const UpdateProfileService = async (userId, data, language = "en") => {
 // =========================
 
 export const ForgotPasswordService = async (email, language = "en") => {
-
     email = email.trim().toLowerCase();
 
     const user = await userRepository.findByEmailWithoutPassword(email);
@@ -359,7 +359,6 @@ export const ForgotPasswordService = async (email, language = "en") => {
         return null;
     }
 
-
     if (user.provider === "GOOGLE") {
         logger.warn(`Password reset attempted for Google account: ${user._id}`);
         throw new ApiError(400, translate("AUTH.GOOGLE_PASSWORD_RESET", language));
@@ -367,7 +366,7 @@ export const ForgotPasswordService = async (email, language = "en") => {
 
     await sendOTPService({
         email: user.email,
-        type: "PASSWORD_RESET"
+        type: "PASSWORD_RESET",
     });
 
     logger.info(`Password reset OTP queued: ${email}`);
@@ -380,7 +379,6 @@ export const ForgotPasswordService = async (email, language = "en") => {
 // =========================
 
 export const ResetPasswordService = async ({ email, otp, newPassword }, language = "en") => {
-
     if (!email || !otp || !newPassword) {
         throw new ApiError(400, translate("AUTH.PASSWORDS_REQUIRED", language));
     }
@@ -407,17 +405,47 @@ export const ResetPasswordService = async ({ email, otp, newPassword }, language
         throw new ApiError(400, translate("AUTH.INVALID_OTP", language));
     }
 
-    const otpdata = JSON.parse(data);
+    const otpData = JSON.parse(data);
 
-    if (otpdata.otp !== String(otp)) {
-        logger.warn(`Invalid password reset OTP attempt: ${user._id}`);
+    if (typeof otpData.attempts !== "number") {
+        otpData.attempts = 0;
+    }
+
+    if (otpData.attempts >= 5) {
+        await redis.del(key);
+        logger.warn(`Password reset OTP blocked due to max failed attempts for: ${email}`);
+        throw new ApiError(
+            400,
+            translate("AUTH.OTP_LOCKED", language) ||
+                "Too many failed attempts. OTP has been invalidated."
+        );
+    }
+
+    const isMatch = await bcrypt.compare(String(otp), otpData.otp);
+
+    if (!isMatch) {
+        otpData.attempts += 1;
+
+        if (otpData.attempts >= 5) {
+            await redis.del(key);
+            logger.warn(`Password reset OTP invalidated after 5 failed attempts for: ${email}`);
+            throw new ApiError(
+                400,
+                translate("AUTH.OTP_LOCKED", language) ||
+                    "Too many failed attempts. OTP has been invalidated."
+            );
+        } else {
+            await redis.set(key, JSON.stringify(otpData), "KEEPTTL");
+        }
+
+        logger.warn(`Invalid password reset OTP attempt (${otpData.attempts}/5): ${user._id}`);
         throw new ApiError(400, translate("AUTH.INVALID_OTP", language));
     }
 
     const hashedNewPassword = await bcrypt.hash(newPassword, SALT_ROUNDS);
 
     await userRepository.updateProfile(user._id, {
-        password: hashedNewPassword
+        password: hashedNewPassword,
     });
 
     await redis.del(key);
@@ -435,7 +463,6 @@ export const ResetPasswordService = async ({ email, otp, newPassword }, language
 // =========================
 
 export const updatePasswordService = async (id, data, language = "en") => {
-
     const { oldPassword, newPassword } = data;
 
     if (!newPassword || !oldPassword) {
@@ -463,7 +490,7 @@ export const updatePasswordService = async (id, data, language = "en") => {
     const newHashedPassword = await bcrypt.hash(newPassword, SALT_ROUNDS);
 
     await userRepository.updateProfile(id, {
-        password: newHashedPassword
+        password: newHashedPassword,
     });
 
     // Revoke all existing sessions/refresh tokens
@@ -479,7 +506,6 @@ export const updatePasswordService = async (id, data, language = "en") => {
 // =========================
 
 export const DeactivateAccountService = async (id, language = "en") => {
-
     const user = await userRepository.findById(id);
 
     if (!user) {
@@ -507,7 +533,6 @@ export const DeactivateAccountService = async (id, language = "en") => {
 // =========================
 
 export const DeleteAccountService = async (id, password, language = "en") => {
-
     const user = await userRepository.findByIdWithPassword(id);
 
     if (!user) {
@@ -530,16 +555,31 @@ export const DeleteAccountService = async (id, password, language = "en") => {
         throw new ApiError(401, translate("AUTH.INVALID_PASSWORD", language));
     }
 
-    await userRepository.findByIdAndDelete(id);
+    // Start a Mongoose session for transactional atomicity
+    const session = await mongoose.startSession();
+    session.startTransaction();
 
-    // Revoke all existing sessions/refresh tokens on account deletion
-    await refreshTokenRepository.deleteByUserId(id);
+    try {
+        // Perform all deletions within the session
+        await userRepository.findByIdAndDelete(id, { session });
+        await refreshTokenRepository.deleteByUserId(id, { session });
 
-    await Business.deleteMany({ $or: [{ userId: id }, { user: id }] });
-    await Customer.deleteMany({ $or: [{ userId: id }, { user: id }] });
-    await Product.deleteMany({ $or: [{ userId: id }, { user: id }] });
-    await Invoice.deleteMany({ $or: [{ userId: id }, { user: id }] });
+        await Business.deleteMany({ $or: [{ userId: id }, { user: id }] }).session(session);
+        await Customer.deleteMany({ $or: [{ userId: id }, { user: id }] }).session(session);
+        await Product.deleteMany({ $or: [{ userId: id }, { user: id }] }).session(session);
+        await Invoice.deleteMany({ $or: [{ userId: id }, { user: id }] }).session(session);
 
+        // Commit transaction if everything succeeds
+        await session.commitTransaction();
+        session.endSession();
+    } catch (error) {
+        // Abort transaction and rollback if anything fails
+        await session.abortTransaction();
+        session.endSession();
+
+        logger.error(`Account deletion failed for user ${id}: ${error.message}`);
+        throw new ApiError(500, translate("COMMON.INTERNAL_ERROR", language));
+    }
 
     await redis.del(`profile:${id}`);
 

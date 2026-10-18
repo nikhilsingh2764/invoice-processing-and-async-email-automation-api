@@ -1,10 +1,8 @@
 import redis from "../../config/redis.js";
-import dashboardRepository from "../../repository/dashboard/dashboard.repository.js"
+import dashboardRepository from "../../repository/dashboard/dashboard.repository.js";
 import logger from "../../utils/logger.js";
 
-
 export const getDashboardService = async (userId, options) => {
-
     // Redis cache key
     const cacheKey = `dashboard:${userId}:${JSON.stringify(options)}`;
 
@@ -19,7 +17,6 @@ export const getDashboardService = async (userId, options) => {
 
     logger.info(`Dashboard cache miss: ${userId}`);
 
-
     // Fetch all dashboard data
     const [
         stats,
@@ -28,9 +25,8 @@ export const getDashboardService = async (userId, options) => {
         invoiceStatusChart,
         topCustomers,
         topProducts,
-        recentInvoices
+        recentInvoices,
     ] = await Promise.all([
-
         dashboardRepository.getDashboardStats(userId),
 
         dashboardRepository.getInvoiceList(userId, options),
@@ -43,33 +39,24 @@ export const getDashboardService = async (userId, options) => {
 
         dashboardRepository.getTopProducts(userId),
 
-        dashboardRepository.getRecentInvoices(userId)
-
+        dashboardRepository.getRecentInvoices(userId),
     ]);
 
     // Final response
     const dashboard = {
-
         stats,
         invoices,
         revenueChart,
         invoiceStatusChart,
         topCustomers,
         topProducts,
-        recentInvoices
-
+        recentInvoices,
     };
 
     // Store in Redis
-    await redis.set(
-        cacheKey,
-        JSON.stringify(dashboard),
-        "EX",
-        60
-    );
+    await redis.set(cacheKey, JSON.stringify(dashboard), "EX", 60);
 
     logger.info(`Dashboard fetched from database and cached: ${userId}`);
 
     return dashboard;
-
 };

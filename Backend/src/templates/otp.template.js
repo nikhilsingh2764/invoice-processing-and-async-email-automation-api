@@ -1,5 +1,4 @@
-const otpTemplate = (username, otp) => {  
-
+const otpTemplate = (username, otp) => {
     return `
     <!DOCTYPE html>
     <html>
@@ -64,7 +63,6 @@ const otpTemplate = (username, otp) => {
     </html>
     
     `;
-
 };
 
-export default otpTemplate;  //this is a OPT template send to every client
+export default otpTemplate; //this is a OPT template send to every client

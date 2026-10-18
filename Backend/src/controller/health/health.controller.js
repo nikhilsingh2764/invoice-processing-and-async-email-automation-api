@@ -6,13 +6,12 @@ export const livenessCheck = (req, res) => {
     return res.status(200).json({
         success: true,
         status: "UP",
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
     });
 };
 
 // Detailed readiness / health check (Dependencies are up)
 export const readinessCheck = async (req, res) => {
-    
     const mongoStatus = mongoose.connection.readyState === 1;
     let redisStatus = false;
 
@@ -30,9 +29,9 @@ export const readinessCheck = async (req, res) => {
         services: {
             api: "UP",
             mongodb: mongoStatus ? "UP" : "DOWN",
-            redis: redisStatus ? "UP" : "DOWN"
+            redis: redisStatus ? "UP" : "DOWN",
         },
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
     });
 };
 

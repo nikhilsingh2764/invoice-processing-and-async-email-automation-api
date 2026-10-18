@@ -1,5 +1,4 @@
 const resetPasswordTemplate = (otp) => {
-
     return `
         <h2>Password Reset OTP</h2>
 
@@ -11,7 +10,6 @@ const resetPasswordTemplate = (otp) => {
 
         <p>If you didn't request a password reset, please ignore this email.</p>
     `;
-    
 };
 
 export default resetPasswordTemplate;

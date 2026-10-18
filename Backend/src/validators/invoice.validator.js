@@ -1,16 +1,13 @@
 import { body } from "express-validator";
 
 export const createInvoiceValidator = [
-
     body("customerId")
         .notEmpty()
         .withMessage("Customer is required")
         .isMongoId()
         .withMessage("Invalid customer id"),
 
-    body("items")
-        .isArray({ min: 1 })
-        .withMessage("Invoice must contain at least one product"),
+    body("items").isArray({ min: 1 }).withMessage("Invoice must contain at least one product"),
 
     body("items.*.productId")
         .notEmpty()
@@ -32,26 +29,12 @@ export const createInvoiceValidator = [
 
     body("status")
         .optional()
-        .isIn([
-            "Draft",
-            "Pending",
-            "Paid",
-            "Partially Paid",
-            "Overdue",
-            "Cancelled"
-        ])
+        .isIn(["Draft", "Pending", "Paid", "Partially Paid", "Overdue", "Cancelled"])
         .withMessage("Invalid invoice status"),
 
     body("paymentMethod")
         .optional()
-        .isIn([
-            "Cash",
-            "UPI",
-            "Credit Card",
-            "Debit Card",
-            "Bank Transfer",
-            "Cheque"
-        ])
+        .isIn(["Cash", "UPI", "Credit Card", "Debit Card", "Bank Transfer", "Cheque"])
         .withMessage("Invalid payment method"),
 
     body("notes")
@@ -64,59 +47,34 @@ export const createInvoiceValidator = [
         .optional()
         .trim()
         .isLength({ max: 2000 })
-        .withMessage("Terms and conditions cannot exceed 2000 characters")
-
+        .withMessage("Terms and conditions cannot exceed 2000 characters"),
 ];
 
 export const updateInvoiceValidator = [
-
-    body("customerId")
-        .optional()
-        .isMongoId()
-        .withMessage("Invalid customer id"),
+    body("customerId").optional().isMongoId().withMessage("Invalid customer id"),
 
     body("items")
         .optional()
         .isArray({ min: 1 })
         .withMessage("Invoice must contain at least one product"),
 
-    body("items.*.productId")
-        .optional()
-        .isMongoId()
-        .withMessage("Invalid product id"),
+    body("items.*.productId").optional().isMongoId().withMessage("Invalid product id"),
 
     body("items.*.quantity")
         .optional()
         .isFloat({ min: 0.01 })
         .withMessage("Quantity must be greater than 0"),
 
-    body("dueDate")
-        .optional()
-        .isISO8601()
-        .withMessage("Invalid due date"),
+    body("dueDate").optional().isISO8601().withMessage("Invalid due date"),
 
     body("status")
         .optional()
-        .isIn([
-            "Draft",
-            "Pending",
-            "Paid",
-            "Partially Paid",
-            "Overdue",
-            "Cancelled"
-        ])
+        .isIn(["Draft", "Pending", "Paid", "Partially Paid", "Overdue", "Cancelled"])
         .withMessage("Invalid invoice status"),
 
     body("paymentMethod")
         .optional()
-        .isIn([
-            "Cash",
-            "UPI",
-            "Credit Card",
-            "Debit Card",
-            "Bank Transfer",
-            "Cheque"
-        ])
+        .isIn(["Cash", "UPI", "Credit Card", "Debit Card", "Bank Transfer", "Cheque"])
         .withMessage("Invalid payment method"),
 
     body("notes")
@@ -129,7 +87,5 @@ export const updateInvoiceValidator = [
         .optional()
         .trim()
         .isLength({ max: 2000 })
-        .withMessage("Terms and conditions cannot exceed 2000 characters")
-
+        .withMessage("Terms and conditions cannot exceed 2000 characters"),
 ];
-

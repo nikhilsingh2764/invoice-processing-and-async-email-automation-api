@@ -5,10 +5,9 @@ import ApiError from "../../utils/ApiError.js";
 import userRepository from "../../repository/auth/user.repository.js";
 import generateToken from "../../utils/generateToken.js";
 import refreshTokenRepository from "../../repository/auth/refreshToken.repository.js";
-import { hashToken } from "../../utils/hashToken.js";
+import hashToken from "../../utils/hashToken.js";
 
 const RefreshTokenService = async (refreshToken, language = "en") => {
-
     // Check refresh token exists
     if (!refreshToken) {
         logger.warn("Refresh token request failed: token missing");
@@ -19,38 +18,34 @@ const RefreshTokenService = async (refreshToken, language = "en") => {
     let decoded;
 
     try {
-
         decoded = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET);
-
     } catch (error) {
-
         logger.warn("Refresh token verification failed");
         throw new ApiError(401, translate("AUTH.INVALID_TOKEN", language));
-
     }
-
 
     // Hash the incoming token to check against database
     const hashedIncomingToken = hashToken(refreshToken);
     const storedToken = await refreshTokenRepository.findByTokenHash(hashedIncomingToken);
 
-
-
     if (!storedToken) {
         // REUSE DETECTION / THEFT ALERT:
-        // If the token decodes successfully via JWT, but is missing from DB, 
-        // it means either it was already rotated (and someone is replaying an old token) 
+        // If the token decodes successfully via JWT, but is missing from DB,
+        // it means either it was already rotated (and someone is replaying an old token)
         // or explicitly revoked. Revoke ALL active sessions for this user as a security measure!
         try {
             await refreshTokenRepository.revokeAllUserSessions(decoded.id);
-            logger.error(`Security Alert: Refresh token reuse detected for user ${decoded.id}. All sessions revoked.`);
+            logger.error(
+                `Security Alert: Refresh token reuse detected for user ${decoded.id}. All sessions revoked.`
+            );
         } catch (err) {
             logger.error(`Failed to revoke sessions during reuse detection: ${err.message}`);
         }
 
         throw new ApiError(
             403,
-            translate("AUTH.TOKEN_REUSE_DETECTED", language) || "Security Alert: Refresh token reuse detected. Please log in again."
+            translate("AUTH.TOKEN_REUSE_DETECTED", language) ||
+            "Security Alert: Refresh token reuse detected. Please log in again."
         );
     }
 
@@ -80,7 +75,7 @@ const RefreshTokenService = async (refreshToken, language = "en") => {
     const newAccessToken = generateToken(
         {
             id: user._id,
-            email: user.email
+            email: user.email,
         },
         process.env.ACCESS_TOKEN_SECRET,
         process.env.ACCESS_TOKEN_EXPIRES_IN || "15m"
@@ -89,7 +84,7 @@ const RefreshTokenService = async (refreshToken, language = "en") => {
     // 9. Generate new refresh token (automatically includes unique jti via generateToken)
     const newRefreshToken = generateToken(
         {
-            id: user._id
+            id: user._id,
         },
         process.env.REFRESH_TOKEN_SECRET,
         process.env.REFRESH_TOKEN_EXPIRES_IN || "15d"
@@ -105,11 +100,16 @@ const RefreshTokenService = async (refreshToken, language = "en") => {
         const val = parseInt(match[1], 10);
         const unit = match[2];
         switch (unit) {
-            case "d": return val * 24 * 60 * 60 * 1000;
-            case "h": return val * 60 * 60 * 1000;
-            case "m": return val * 60 * 1000;
-            case "s": return val * 1000;
-            default: return 15 * 24 * 60 * 60 * 1000;
+            case "d":
+                return val * 24 * 60 * 60 * 1000;
+            case "h":
+                return val * 60 * 60 * 1000;
+            case "m":
+                return val * 60 * 1000;
+            case "s":
+                return val * 1000;
+            default:
+                return 15 * 24 * 60 * 60 * 1000;
         }
     };
 
@@ -121,7 +121,7 @@ const RefreshTokenService = async (refreshToken, language = "en") => {
     await refreshTokenRepository.create({
         userId: user._id,
         tokenHash: hashToken(newRefreshToken),
-        expiresAt: refreshTokenExpiresAt
+        expiresAt: refreshTokenExpiresAt,
     });
 
     logger.info(`Refresh token rotated successfully: ${user._id}`);
@@ -129,7 +129,7 @@ const RefreshTokenService = async (refreshToken, language = "en") => {
     // 12. Return new token pair
     return {
         newAccessToken,
-        newRefreshToken
+        newRefreshToken,
     };
 };
 

@@ -1,29 +1,25 @@
-import authMiddleware from '../../middleware/auth.middleware.js';
+import authMiddleware from "../../middleware/auth.middleware.js";
 
 import express from "express";
 
 import {
     createProductValidator,
-    updateProductValidator
-} from '../../validators/product.validator.js';
+    updateProductValidator,
+} from "../../validators/product.validator.js";
 
-import validate from '../../middleware/validate.js';
+import validate from "../../middleware/validate.js";
 
-import {
-    ProductLimiter
-} from '../../middleware/rateLimiter.middleware.js';
+import { ProductLimiter } from "../../middleware/rateLimiter.middleware.js";
 
 import {
     createProduct,
     getAllProducts,
     getProductById,
     updateProduct,
-    deleteProduct
+    deleteProduct,
 } from "../../controller/invoice/product.controller.js";
 
-
 const router = express.Router();
-
 
 /**
  * @swagger
@@ -31,7 +27,6 @@ const router = express.Router();
  *   - name: Product
  *     description: Product management
  */
-
 
 /**
  * @swagger
@@ -123,14 +118,13 @@ const router = express.Router();
  *         description: Internal server error
  */
 router.post(
-    '/product',
+    "/product",
     ProductLimiter,
     authMiddleware,
     createProductValidator,
     validate,
     createProduct
 );
-
 
 /**
  * @swagger
@@ -157,12 +151,7 @@ router.post(
  *       500:
  *         description: Internal server error
  */
-router.get(
-    '/product',
-    authMiddleware,
-    getAllProducts
-);
-
+router.get("/product", authMiddleware, getAllProducts);
 
 /**
  * @swagger
@@ -201,12 +190,7 @@ router.get(
  *       500:
  *         description: Internal server error
  */
-router.get(
-    '/product/:id',
-    authMiddleware,
-    getProductById
-);
-
+router.get("/product/:id", authMiddleware, getProductById);
 
 /**
  * @swagger
@@ -301,14 +285,13 @@ router.get(
  *         description: Internal server error
  */
 router.patch(
-    '/product/:id',
+    "/product/:id",
     ProductLimiter,
     authMiddleware,
     updateProductValidator,
     validate,
     updateProduct
 );
-
 
 /**
  * @swagger
@@ -347,12 +330,6 @@ router.patch(
  *       500:
  *         description: Internal server error
  */
-router.delete(
-    '/product/:id',
-    ProductLimiter,
-    authMiddleware,
-    deleteProduct
-);
-
+router.delete("/product/:id", ProductLimiter, authMiddleware, deleteProduct);
 
 export default router;

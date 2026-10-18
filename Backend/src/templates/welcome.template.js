@@ -1,5 +1,4 @@
 const welcomeTemplate = (username) => {
-
     return `
     <!DOCTYPE html>
     <html>
@@ -74,7 +73,6 @@ const welcomeTemplate = (username) => {
     `;
 };
 
-export default welcomeTemplate; 
-
+export default welcomeTemplate;
 
 //this is a welcome template send to every client

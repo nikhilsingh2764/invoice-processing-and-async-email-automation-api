@@ -1,15 +1,11 @@
 import Business from "../../model/invoice/Business.model.js";
 
 class BusinessRepository {
-
-
     //create Business profile
 
     async create(userdata) {
         return await Business.create(userdata);
     }
-
-
 
     //find Business profile using userId  and email
 
@@ -17,13 +13,9 @@ class BusinessRepository {
         return await Business.findOne({ userId });
     }
 
-
     async findByEmail(email) {
         return await Business.findOne({ email });
     }
-
-
-
 
     //delete Business profile using userId
 
@@ -31,26 +23,16 @@ class BusinessRepository {
         return await Business.findOneAndDelete({ userId });
     }
 
-
-
-
     //update Business profile using userId
 
     //we first use findByIdAndUpdate and get error becuase this only accept and search by _id
     //know we use findOneAndUpdate allow to search on any feilds like in this userId
     async updateByUserId(userId, data) {
-        return await Business.findOneAndUpdate(
-            { userId },
-            data,
-            {
-                new: true,
-                runValidators: true,
-            }
-        );
+        return await Business.findOneAndUpdate({ userId }, data, {
+            new: true,
+            runValidators: true,
+        });
     }
-
-
-
 
     // check Business profile exist or not
 
@@ -58,23 +40,17 @@ class BusinessRepository {
         return await Business.exists({ userId });
     }
 
-
     async incrementInvoiceNumber(userId, session = null) {
         return await Business.findOneAndUpdate(
             { userId },
             { $inc: { nextInvoiceNumber: 1 } },
             {
                 new: false,
-                upsert: true,
-                setOnInsert: { nextInvoiceNumber: 1 },
                 runValidators: true,
-                session
+                session,
             }
         );
     }
-
-
-};
-
+}
 
 export default new BusinessRepository();

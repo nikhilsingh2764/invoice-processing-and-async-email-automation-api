@@ -1,6 +1,7 @@
 import "./config/sentry.js";
 
 import express from "express";
+import mongoSanitize from "express-mongo-sanitize";
 import helmet from "helmet";
 import cors from "cors";
 import cookieParser from "cookie-parser";
@@ -9,12 +10,12 @@ import i18next from "./config/i18n.js";
 import middleware from "i18next-http-middleware";
 
 import userRoutes from "./route/auth/user.routes.js";
-import tokenRoutes from "./route/auth/token.routes.js"
-import businessRoutes from "./route/invoice/business.routes.js"
-import productRoutes from "./route/invoice/product.routes.js"
-import customerRoutes from "./route/invoice/customer.routes.js"
-import invoiceRoutes from "./route/invoice/invoice.routes.js"
-import dashboardRoutes from "./route/dashboard/dashboard.routes.js"
+import tokenRoutes from "./route/auth/token.routes.js";
+import businessRoutes from "./route/invoice/business.routes.js";
+import productRoutes from "./route/invoice/product.routes.js";
+import customerRoutes from "./route/invoice/customer.routes.js";
+import invoiceRoutes from "./route/invoice/invoice.routes.js";
+import dashboardRoutes from "./route/dashboard/dashboard.routes.js";
 
 import healthRouter from "./route/health/health.routes.js";
 import metricsRouter from "./route/metrics/metrics.routes.js";
@@ -24,30 +25,15 @@ import errorMiddleware from "./middleware/error.middleware.js";
 
 import requestLogger from "./middleware/requestLogger.js";
 
-
 import swaggerUi from "swagger-ui-express";
 import swaggerSpec from "./config/swagger.js";
 
-
-
-
 const app = express();
-
-
-app.use((req, res, next) => {
-    next();
-});
-
-
-
-//app.use()   //express method used to register/add middleware runs for every incoming requests.
-//parse= read raw data, understand its format and convert into Javascript Object
 
 app.set("trust proxy", 1);
 
 // Security
-app.use(helmet());  //adds security-related HTTP headers to protect an Express application from common web attacks.
-
+app.use(helmet());
 
 app.use(
     cors({
@@ -56,67 +42,54 @@ app.use(
     })
 );
 
+app.use(express.json({ limit: "1mb" }));
 
-// Parse/convert JSON into a JavaScript object and stores it in req.body. || frontend -> express.json() -> req.body
-app.use(express.json());
+app.use(mongoSanitize());
 
-
-
-// Register Language Middleware EARLY (before routes)
 app.use(middleware.handle(i18next));
 
-// parses cookies from the request and stored in req.cookies.
 app.use(cookieParser());
 
 app.use(requestLogger);
 
-
 app.use(metricsMiddleware);
-
-
 
 //routes handle here
 
-app.use('/api/v1', userRoutes);
+app.use("/api/v1", userRoutes);
 
-app.use('/api/v1', tokenRoutes);
+app.use("/api/v1", tokenRoutes);
 
-app.use('/api/v1', businessRoutes);
+app.use("/api/v1", businessRoutes);
 
-app.use('/api/v1', productRoutes);
+app.use("/api/v1", productRoutes);
 
-app.use('/api/v1', customerRoutes);
+app.use("/api/v1", customerRoutes);
 
-app.use('/api/v1', invoiceRoutes);
+app.use("/api/v1", invoiceRoutes);
 
-app.use('/api/v1/dashboard', dashboardRoutes);
+app.use("/api/v1/dashboard", dashboardRoutes);
 
 app.use("/api/v1/health", healthRouter);
 
 app.use("/api/v1", metricsRouter);
 
-
 app.get("/health", (req, res) => {
     res.status(200).json({
         success: true,
-        message: "API is healthy"
+        message: "API is healthy",
     });
 });
 
-
-
-if (process.env.NODE_ENV !== 'production') {
-    app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+if (process.env.NODE_ENV !== "production") {
+    app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 } else {
-    app.use('/api-docs', (req, res) => {
-        res.status(403).json({ error: 'API documentation is disabled in production.' });
+    app.use("/api-docs", (req, res) => {
+        res.status(403).json({ error: "API documentation is disabled in production." });
     });
 }
-
 
 // Global Error Handler (ALWAYS LAST)
 app.use(errorMiddleware);
 
 export default app;
-
-

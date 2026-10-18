@@ -21,7 +21,7 @@ const formatMoney = (amount, currency = "INR") => {
             style: "currency",
             currency,
             minimumFractionDigits: 2,
-            maximumFractionDigits: 2
+            maximumFractionDigits: 2,
         }).format(toNumber(amount));
     } catch {
         return `${currency} ${toNumber(amount).toFixed(2)}`;
@@ -36,7 +36,7 @@ const formatDate = (date) => {
         day: "2-digit",
         month: "short",
         year: "numeric",
-        timeZone: "Asia/Kolkata"
+        timeZone: "Asia/Kolkata",
     });
 };
 
@@ -46,7 +46,7 @@ const STATUS_STYLES = {
     "PARTIALLY PAID": { bg: "#EFF6FF", fg: "#1D4ED8" },
     OVERDUE: { bg: "#FEF2F2", fg: "#B91C1C" },
     CANCELLED: { bg: "#F1F5F9", fg: "#475569" },
-    DRAFT: { bg: "#F1F5F9", fg: "#475569" }
+    DRAFT: { bg: "#F1F5F9", fg: "#475569" },
 };
 
 const MAX_ITEMS_SHOWN = 5;
@@ -98,7 +98,7 @@ const generateInvoiceEmailContent = (invoice) => {
         detailRow("Invoice number", esc(invoiceNumber), true),
         detailRow("Invoice date", esc(formatDate(invoice.invoiceDate))),
         detailRow("Due date", esc(dueDate), !isPaid),
-        invoice.paymentMethod ? detailRow("Payment method", esc(invoice.paymentMethod)) : ""
+        invoice.paymentMethod ? detailRow("Payment method", esc(invoice.paymentMethod)) : "",
     ].join("");
 
     // ---------- items ----------
@@ -182,8 +182,10 @@ const generateInvoiceEmailContent = (invoice) => {
 
     // ---------- footer contact ----------
     const contactParts = [
-        business.email ? `<a href="mailto:${esc(business.email)}" style="color:#1D4ED8;text-decoration:none;">${esc(business.email)}</a>` : "",
-        business.phone ? esc(business.phone) : ""
+        business.email
+            ? `<a href="mailto:${esc(business.email)}" style="color:#1D4ED8;text-decoration:none;">${esc(business.email)}</a>`
+            : "",
+        business.phone ? esc(business.phone) : "",
     ].filter(Boolean);
 
     const body = `<!DOCTYPE html>

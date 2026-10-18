@@ -19,8 +19,8 @@ const logger = winston.createLogger({
         winston.format.json() // JSON format for container environments like Render
     ),
     transports: [
-        new winston.transports.Console() // Console only - no file rotation on Render
-    ]
+        new winston.transports.Console(), // Console only - no file rotation on Render
+    ],
 });
 
 export default logger;

@@ -7,29 +7,24 @@ const requiredEnvVars = [
     "REFRESH_TOKEN_SECRET",
     "BREVO_API_KEY",
     "EMAIL_USER",
-    "CLIENT_URL"
+    "CLIENT_URL",
 ];
 
-const missingEnvVars = requiredEnvVars.filter((key) => !process.env[key] || process.env[key].trim() === "");
+const missingEnvVars = requiredEnvVars.filter(
+    (key) => !process.env[key] || process.env[key].trim() === ""
+);
 if (missingEnvVars.length > 0) {
-    console.error(`❌ Startup Error: Missing required environment variables in .env: ${missingEnvVars.join(", ")}`);
+    console.error(
+        `❌ Startup Error: Missing required environment variables in .env: ${missingEnvVars.join(", ")}`
+    );
     process.exit(1);
 }
 
 import app from "./app.js";
 import connectDB from "./config/db.js";
-
-import { overdueQueue,scheduleOverdueJob } from "./queues/overdue.queue.js";
-import overdueWorker from "./worker/overdue.worker.js";
-import emailWorker from "./worker/email.worker.js";
-import invoicePDFWorker from "./worker/invoicePDF.worker.js";
-import invoiceEmailWorker from "./worker/invoiceEmail.worker.js";
 import redis from "./config/redis.js";
 import gracefulShutdown from "./utils/gracefulShutdown.js";
-
-
 import logger from "./utils/logger.js";
-
 
 // ==========================================
 // Process-Level Error Handlers
@@ -38,7 +33,7 @@ process.on("uncaughtException", (error) => {
     logger.error({
         message: "Uncaught Exception detected! Shutting down process...",
         error: error.message,
-        stack: error.stack
+        stack: error.stack,
     });
     process.exit(1);
 });
@@ -47,19 +42,15 @@ process.on("unhandledRejection", (reason, promise) => {
     logger.error({
         message: "Unhandled Promise Rejection detected! Shutting down process...",
         reason: reason?.message || reason,
-        stack: reason?.stack
+        stack: reason?.stack,
     });
     process.exit(1);
 });
 
-
 const PORT = process.env.PORT || 5000;
 
-
 const startServer = async () => {
-
     try {
-
         await connectDB();
 
         const server = app.listen(PORT, "0.0.0.0", () => {
@@ -67,40 +58,26 @@ const startServer = async () => {
             logger.info(`http://localhost:${PORT}`);
         });
 
-
-        await scheduleOverdueJob();
-
-        // Bundle your workers array
-        const workers = [emailWorker, invoicePDFWorker, invoiceEmailWorker, overdueWorker];
-        
-        // Shutdown trigger handler
+        // Shutdown trigger handler (No workers in web process anymore)
         const shutdownHandler = (signal) => {
-
             logger.info(`Received ${signal}.`);
 
             gracefulShutdown({
                 server,
                 redis,
-                workers
+                workers: [], // Empty array since workers run in their own process
             }).catch((err) => {
                 logger.error(`Error during graceful shutdown: ${err.message}`);
                 process.exit(1);
             });
-
         };
 
-        // Register signals
         process.on("SIGTERM", () => shutdownHandler("SIGTERM"));
         process.on("SIGINT", () => shutdownHandler("SIGINT"));
-
-
     } catch (error) {
-
         logger.error("Server failed to start:", error.message);
         process.exit(1);
-
     }
-
 };
 
 startServer();

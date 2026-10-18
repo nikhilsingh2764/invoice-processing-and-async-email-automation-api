@@ -1,7 +1,6 @@
 import { body } from "express-validator";
 
 const passwordValidator = (fieldName) => {
-
     return body(fieldName)
         .notEmpty()
         .withMessage(`${fieldName} is required`)
@@ -18,10 +17,7 @@ const passwordValidator = (fieldName) => {
         .withMessage("Password must contain one special character");
 };
 
-
-
 export const signupValidator = [
-
     body("username")
         .trim()
         .notEmpty()
@@ -31,7 +27,6 @@ export const signupValidator = [
         .matches(/^[A-Za-z0-9_]+$/)
         .withMessage("Username can only contain letters, numbers, and underscores"),
 
-
     body("email")
         .trim()
         .notEmpty()
@@ -40,15 +35,10 @@ export const signupValidator = [
         .withMessage("Invalid email address")
         .normalizeEmail(),
 
-
-    passwordValidator("password")
-
+    passwordValidator("password"),
 ];
 
-
-
 export const verifyOtpValidator = [
-
     body("email")
         .trim()
         .notEmpty()
@@ -56,7 +46,6 @@ export const verifyOtpValidator = [
         .isEmail()
         .withMessage("Invalid email format")
         .normalizeEmail(),
-
 
     body("otp")
         .trim()
@@ -65,14 +54,10 @@ export const verifyOtpValidator = [
         .isLength({ min: 6, max: 6 })
         .withMessage("OTP must be 6 digits")
         .isInt()
-        .withMessage("OTP must contain only numbers")
-
+        .withMessage("OTP must contain only numbers"),
 ];
 
-
-
 export const LoginValidator = [
-
     body("email")
         .trim()
         .notEmpty()
@@ -81,56 +66,26 @@ export const LoginValidator = [
         .withMessage("Invalid email format")
         .normalizeEmail(),
 
-
-    passwordValidator("password")
-
+    passwordValidator("password"),
 ];
 
-
-
 export const updateProfileValidator = [
-
     body("username")
         .optional({ checkFalsy: true })
         .trim()
         .isLength({ min: 3, max: 30 })
         .withMessage("Username must be between 3 and 30 characters")
         .matches(/^[A-Za-z0-9_]+$/)
-        .withMessage("Username can only contain letters, numbers, and underscores")
-
+        .withMessage("Username can only contain letters, numbers, and underscores"),
 ];
-
-
 
 export const changePasswordValidator = [
+    body("oldPassword").notEmpty().withMessage("Old password is required"),
 
-    body("oldPassword")
-        .notEmpty()
-        .withMessage("Old password is required"),
-
-
-    passwordValidator("newPassword")
-
+    passwordValidator("newPassword"),
 ];
-
-
 
 export const forgotPasswordValidator = [
-
-    body("email")
-        .trim()
-        .notEmpty()
-        .withMessage("Email is required")
-        .isEmail()
-        .withMessage("Invalid email format")
-        .normalizeEmail()
-
-];
-
-
-
-export const resetPasswordValidator = [
-
     body("email")
         .trim()
         .notEmpty()
@@ -138,7 +93,16 @@ export const resetPasswordValidator = [
         .isEmail()
         .withMessage("Invalid email format")
         .normalizeEmail(),
+];
 
+export const resetPasswordValidator = [
+    body("email")
+        .trim()
+        .notEmpty()
+        .withMessage("Email is required")
+        .isEmail()
+        .withMessage("Invalid email format")
+        .normalizeEmail(),
 
     body("otp")
         .trim()
@@ -149,9 +113,7 @@ export const resetPasswordValidator = [
         .isInt()
         .withMessage("OTP must contain only numbers"),
 
-
     passwordValidator("newPassword"),
-
 
     body("confirmPassword")
         .notEmpty()
@@ -163,6 +125,5 @@ export const resetPasswordValidator = [
             }
 
             return true;
-        })
-
+        }),
 ];

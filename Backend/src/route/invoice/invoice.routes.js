@@ -1,13 +1,13 @@
-import authMiddleware from '../../middleware/auth.middleware.js';
+import authMiddleware from "../../middleware/auth.middleware.js";
 
 import express from "express";
 
-import validate from '../../middleware/validate.js';
+import validate from "../../middleware/validate.js";
 
 import {
     updateInvoiceValidator,
-    createInvoiceValidator
-} from '../../validators/invoice.validator.js';
+    createInvoiceValidator,
+} from "../../validators/invoice.validator.js";
 
 import {
     createInvoice,
@@ -18,8 +18,8 @@ import {
     sendInvoiceEmail,
     duplicateInvoice,
     getInvoicePDFStatus,
-    getInvoiceEmailStatus
-} from '../../controller/invoice/invoice.controller.js';
+    getInvoiceEmailStatus,
+} from "../../controller/invoice/invoice.controller.js";
 
 import {
     invoiceCreateLimiter,
@@ -28,12 +28,10 @@ import {
     invoiceEmailLimiter,
     invoiceDuplicateLimiter,
     invoiceReadLimiter,
-    invoicePdfLimiter
-} from '../../middleware/rateLimiter.middleware.js';
-
+    invoicePdfLimiter,
+} from "../../middleware/rateLimiter.middleware.js";
 
 const router = express.Router();
-
 
 /**
  * @swagger
@@ -41,7 +39,6 @@ const router = express.Router();
  *   - name: Invoice
  *     description: Invoice management
  */
-
 
 /**
  * @swagger
@@ -155,7 +152,6 @@ router.post(
     createInvoice
 );
 
-
 /**
  * @swagger
  * /invoice/{id}:
@@ -193,13 +189,7 @@ router.post(
  *       500:
  *         description: Internal server error
  */
-router.get(
-    "/invoice/:id",
-    invoiceReadLimiter,
-    authMiddleware,
-    getInvoiceById
-);
-
+router.get("/invoice/:id", invoiceReadLimiter, authMiddleware, getInvoiceById);
 
 /**
  * @swagger
@@ -313,7 +303,6 @@ router.patch(
     updateInvoice
 );
 
-
 /**
  * @swagger
  * /invoice/{id}:
@@ -351,13 +340,7 @@ router.patch(
  *       500:
  *         description: Internal server error
  */
-router.delete(
-    "/invoice/:id",
-    invoiceDeleteLimiter,
-    authMiddleware,
-    deleteInvoice
-);
-
+router.delete("/invoice/:id", invoiceDeleteLimiter, authMiddleware, deleteInvoice);
 
 /**
  * @swagger
@@ -401,13 +384,7 @@ router.delete(
  *       500:
  *         description: Failed to generate invoice PDF
  */
-router.get(
-    "/invoice/:id/pdf",
-    invoicePdfLimiter,
-    authMiddleware,
-    downloadInvoicePDF
-);
-
+router.get("/invoice/:id/pdf", invoicePdfLimiter, authMiddleware, downloadInvoicePDF);
 
 /**
  * @swagger
@@ -446,13 +423,7 @@ router.get(
  *       500:
  *         description: Failed to queue invoice email
  */
-router.post(
-    "/invoice/:id/email",
-    invoiceEmailLimiter,
-    authMiddleware,
-    sendInvoiceEmail
-);
-
+router.post("/invoice/:id/email", invoiceEmailLimiter, authMiddleware, sendInvoiceEmail);
 
 /**
  * @swagger
@@ -491,24 +462,10 @@ router.post(
  *       500:
  *         description: Internal server error
  */
-router.post(
-    "/invoice/:id/duplicate",
-    invoiceDuplicateLimiter,
-    authMiddleware,
-    duplicateInvoice
-);
+router.post("/invoice/:id/duplicate", invoiceDuplicateLimiter, authMiddleware, duplicateInvoice);
 
-router.get(
-    "/invoice/pdf/status/:jobId",
-    authMiddleware,
-    getInvoicePDFStatus
-);
+router.get("/invoice/pdf/status/:jobId", authMiddleware, getInvoicePDFStatus);
 
-router.get(
-    "/invoice/email/status/:jobId",
-    authMiddleware,
-    getInvoiceEmailStatus
-);
-
+router.get("/invoice/email/status/:jobId", authMiddleware, getInvoiceEmailStatus);
 
 export default router;

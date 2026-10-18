@@ -14,10 +14,10 @@ const overdueWorker = new Worker(
         const result = await Invoice.updateMany(
             {
                 status: "Pending",
-                dueDate: { $lt: now }
+                dueDate: { $lt: now },
             },
             {
-                $set: { status: "Overdue" }
+                $set: { status: "Overdue" },
             }
         );
 

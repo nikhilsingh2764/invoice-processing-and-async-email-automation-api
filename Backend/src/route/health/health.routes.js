@@ -2,7 +2,7 @@ import { Router } from "express";
 import {
     livenessCheck,
     readinessCheck,
-    healthCheck
+    healthCheck,
 } from "../../controller/health/health.controller.js";
 
 const router = Router();

@@ -25,8 +25,8 @@ redis.on("ready", () => {
 });
 
 // Catch any stray unhandled socket errors from BullMQ internal client streams globally
-process.on('uncaughtException', (err) => {
-    if (err.code === 'EPIPE' || err.code === 'ECONNRESET') {
+process.on("uncaughtException", (err) => {
+    if (err.code === "EPIPE" || err.code === "ECONNRESET") {
         return; // Suppress background Redis socket drops safely
     }
     // Re-throw other critical uncaught exceptions

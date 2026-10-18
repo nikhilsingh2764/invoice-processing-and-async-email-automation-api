@@ -4,14 +4,13 @@ import productRepository from "../repository/invoice/product.repository.js";
 const toPaise = (amount) => Math.round(Number(amount) * 100);
 const toRupees = (paise) => Number((paise / 100).toFixed(2));
 
-export const buildInvoiceItems = async (items, userId) => {
-
+export const buildInvoiceItems = async (items, userId, session = null) => {
     if (!items || items.length === 0) {
         throw new ApiError(400, "Invoice must contain at least one product");
     }
 
     // 1. Check for duplicate product IDs in the request
-    const productIds = items.map(item => item.productId);
+    const productIds = items.map((item) => item.productId);
     const uniqueProductIds = new Set(productIds);
     if (uniqueProductIds.size !== productIds.length) {
         throw new ApiError(400, "Duplicate products are not allowed in the same invoice");
@@ -24,11 +23,15 @@ export const buildInvoiceItems = async (items, userId) => {
         }
     }
 
-    // 3. Batch fetch all products in a SINGLE query using $in
-    const products = await productRepository.findManyByIdsAndUserId(Array.from(uniqueProductIds), userId);
+    // 3. Batch fetch all products in a SINGLE query using $in, passing the transaction session
+    const products = await productRepository.findManyByIdsAndUserId(
+        Array.from(uniqueProductIds),
+        userId,
+        session
+    );
 
     // Create a O(1) lookup map keyed by product ID string
-    const productMap = new Map(products.map(p => [p._id.toString(), p]));
+    const productMap = new Map(products.map((p) => [p._id.toString(), p]));
 
     const invoiceItems = [];
     let subTotalPaise = 0;
@@ -60,7 +63,7 @@ export const buildInvoiceItems = async (items, userId) => {
             quantity: item.quantity,
             taxRate: product.taxRate,
             discount: product.discount,
-            lineTotal: toRupees(lineTotalPaise)
+            lineTotal: toRupees(lineTotalPaise),
         });
 
         subTotalPaise += itemSubTotalPaise;
@@ -75,7 +78,6 @@ export const buildInvoiceItems = async (items, userId) => {
         subTotal: toRupees(subTotalPaise),
         totalTax: toRupees(totalTaxPaise),
         totalDiscount: toRupees(totalDiscountPaise),
-        grandTotal: toRupees(grandTotalPaise)
+        grandTotal: toRupees(grandTotalPaise),
     };
-
 };

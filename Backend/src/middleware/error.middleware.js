@@ -2,7 +2,6 @@ import logger from "../utils/logger.js";
 import * as Sentry from "@sentry/node";
 
 const errorMiddleware = (err, req, res, next) => {
-   
     let statusCode = err.statusCode || 500;
     let message = err.message || "Something went wrong";
     let errors = err.errors || null;
@@ -47,7 +46,7 @@ const errorMiddleware = (err, req, res, next) => {
             method: req.method,
             url: req.originalUrl,
             statusCode,
-            stack: err.stack
+            stack: err.stack,
         });
     } else {
         logger.warn(`Client Error [${statusCode}]: ${message} on ${req.method} ${req.originalUrl}`);
@@ -57,7 +56,7 @@ const errorMiddleware = (err, req, res, next) => {
     const response = {
         success: false,
         message,
-        ...(errors && { errors })
+        ...(errors && { errors }),
     };
 
     // Include stack trace only in development

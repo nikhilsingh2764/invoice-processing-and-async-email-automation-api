@@ -10,10 +10,10 @@ export const scheduleOverdueJob = async () => {
         {},
         {
             repeat: {
-                pattern: "0 0 * * *" // Runs every day at 00:00 (midnight)
+                pattern: "0 0 * * *", // Runs every day at 00:00 (midnight)
             },
             removeOnComplete: true,
-            removeOnFail: true
+            removeOnFail: true,
         }
     );
 };

@@ -1,52 +1,49 @@
-import express from 'express';
-import validate from '../../middleware/validate.js';
-import authMiddleware from '../../middleware/auth.middleware.js';
+import express from "express";
+import validate from "../../middleware/validate.js";
+import authMiddleware from "../../middleware/auth.middleware.js";
 
-import { googleLoginController } from '../../controller/auth/googleAuth.controller.js';
+import { googleLoginController } from "../../controller/auth/googleAuth.controller.js";
 
 import {
-    Signup, 
-    DeactivateAccount, 
-    ForgotPassword, 
-    ResetPassword, 
+    Signup,
+    DeactivateAccount,
+    ForgotPassword,
+    ResetPassword,
     VerifyOTP,
-    DeleteAccount, 
-    Login, 
-    Profile, 
-    Logout, 
-    UpdateProfile, 
-    UpdatePassword
-} from '../../controller/auth/user.controller.js';
+    DeleteAccount,
+    Login,
+    Profile,
+    Logout,
+    UpdateProfile,
+    UpdatePassword,
+} from "../../controller/auth/user.controller.js";
 
 import {
-    signupValidator, 
-    verifyOtpValidator, 
-    LoginValidator, 
+    signupValidator,
+    verifyOtpValidator,
+    LoginValidator,
     updateProfileValidator,
-    changePasswordValidator, 
-    forgotPasswordValidator, 
-    resetPasswordValidator
-} from '../../validators/auth.validator.js';
+    changePasswordValidator,
+    forgotPasswordValidator,
+    resetPasswordValidator,
+} from "../../validators/auth.validator.js";
 
 import {
-    apiLimiter, 
-    forgotPasswordLimiter, 
+    apiLimiter,
+    forgotPasswordLimiter,
     verifyOtpLimiter,
-    signupLimiter, 
-    loginLimiter
-} from '../../middleware/rateLimiter.middleware.js';
-
+    signupLimiter,
+    loginLimiter,
+} from "../../middleware/rateLimiter.middleware.js";
 
 const router = express.Router();
 
-/** 
- * @swagger 
- * tags: 
- * - name: Authentication 
- * description: User authentication and account management 
+/**
+ * @swagger
+ * tags:
+ * - name: Authentication
+ * description: User authentication and account management
  */
-
-
 
 /**
  * @swagger
@@ -103,16 +100,7 @@ const router = express.Router();
  *         description: Internal server error
  */
 
-
-
-router.post(
-    "/signup",
-    signupLimiter,
-    signupValidator,
-    validate,
-    Signup
-);
-
+router.post("/signup", signupLimiter, signupValidator, validate, Signup);
 
 /**
  * @swagger
@@ -157,15 +145,7 @@ router.post(
  *         description: Internal server error
  */
 
-router.post(
-    '/verify-otp',
-    verifyOtpLimiter,
-    verifyOtpValidator,
-    validate,
-    VerifyOTP
-)
-
-
+router.post("/verify-otp", verifyOtpLimiter, verifyOtpValidator, validate, VerifyOTP);
 
 /**
  * @swagger
@@ -214,15 +194,7 @@ router.post(
  *         description: Internal server error
  */
 
-router.post(
-    '/login',
-    loginLimiter,
-    LoginValidator,
-    validate,
-    Login
-)
-
-
+router.post("/login", loginLimiter, LoginValidator, validate, Login);
 
 /**
  * @swagger
@@ -250,15 +222,7 @@ router.post(
  *         description: Internal server error
  */
 
-router.get(
-    '/profile',
-    apiLimiter,
-    authMiddleware,
-    Profile
-)
-
-
-
+router.get("/profile", apiLimiter, authMiddleware, Profile);
 
 /**
  * @swagger
@@ -283,15 +247,7 @@ router.get(
  *         description: Internal server error
  */
 
-
-
-router.post(
-    '/logout',
-    authMiddleware,
-    Logout
-)
-
-
+router.post("/logout", authMiddleware, Logout);
 
 /**
  * @swagger
@@ -338,15 +294,13 @@ router.post(
  */
 
 router.patch(
-    '/update-profile',
+    "/update-profile",
     apiLimiter,
     authMiddleware,
     updateProfileValidator,
     validate,
     UpdateProfile
 );
-
-
 
 /**
  * @swagger
@@ -397,19 +351,14 @@ router.patch(
  *         description: Internal server error
  */
 
-
 router.patch(
-    '/change-password',
+    "/change-password",
     apiLimiter,
     authMiddleware,
     changePasswordValidator,
     validate,
     UpdatePassword
 );
-
-
-
-
 
 /**
  * @swagger
@@ -434,16 +383,7 @@ router.patch(
  *         description: Internal server error
  */
 
-
-router.patch(
-    '/deactivate-account',
-    apiLimiter,
-    authMiddleware,
-    DeactivateAccount
-)
-
-
-
+router.patch("/deactivate-account", apiLimiter, authMiddleware, DeactivateAccount);
 
 /**
  * @swagger
@@ -486,14 +426,7 @@ router.patch(
  *         description: Internal server error
  */
 
-
-router.delete(
-    '/delete-account',
-    apiLimiter,
-    authMiddleware,
-    DeleteAccount
-)
-
+router.delete("/delete-account", apiLimiter, authMiddleware, DeleteAccount);
 
 /**
  * @swagger
@@ -532,8 +465,6 @@ router.delete(
  *         description: Internal server error
  */
 
-
-
 router.post(
     "/forgot-password",
     forgotPasswordLimiter,
@@ -541,7 +472,6 @@ router.post(
     validate,
     ForgotPassword
 );
-
 
 /**
  * @swagger
@@ -600,42 +530,8 @@ router.post(
  *         description: Internal server error
  */
 
+router.post("/reset-password", verifyOtpLimiter, resetPasswordValidator, validate, ResetPassword);
 
-router.post(
-    "/reset-password",
-    verifyOtpLimiter,
-    resetPasswordValidator,
-    validate,
-    ResetPassword
-);
-
-
-router.post(
-    "/google",
-    googleLoginController
-);
-
-
-
-
-
-
-
-
-
+router.post("/google", googleLoginController);
 
 export default router;
-
-
-
-
-
-
-
-
-
-
-
-
-
-

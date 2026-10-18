@@ -1,19 +1,16 @@
 import { body } from "express-validator";
 
-
 // ==============================
 // Create Customer Validator
 // ==============================
 
 export const createCustomerValidator = [
-
     body("customerName")
         .trim()
         .notEmpty()
         .withMessage("Customer name is required")
         .isLength({ min: 3, max: 100 })
         .withMessage("Customer name must be between 3 and 100 characters"),
-
 
     body("email")
         .trim()
@@ -23,7 +20,6 @@ export const createCustomerValidator = [
         .isEmail()
         .withMessage("Please provide a valid email address"),
 
-
     body("phone")
         .trim()
         .notEmpty()
@@ -31,20 +27,17 @@ export const createCustomerValidator = [
         .matches(/^[0-9]{10}$/)
         .withMessage("Phone number must contain exactly 10 digits"),
 
-
     body("companyName")
         .optional()
         .trim()
         .isLength({ min: 3, max: 100 })
         .withMessage("Company name must be between 3 and 100 characters"),
 
-
     body("gstNumber")
         .optional()
         .trim()
         .matches(/^[0-9A-Za-z]{15}$/)
         .withMessage("GST number must contain exactly 15 characters"),
-
 
     body("customerType")
         .trim()
@@ -53,13 +46,11 @@ export const createCustomerValidator = [
         .isIn(["Individual", "Business"])
         .withMessage("Invalid customer type"),
 
-
     body("notes")
         .optional()
         .trim()
         .isLength({ max: 500 })
         .withMessage("Notes cannot exceed 500 characters"),
-
 
     // Billing Address
 
@@ -68,35 +59,18 @@ export const createCustomerValidator = [
         .notEmpty()
         .withMessage("Billing address line 1 is required"),
 
+    body("billingAddress.addressLine2").optional().trim(),
 
-    body("billingAddress.addressLine2")
-        .optional()
-        .trim(),
+    body("billingAddress.city").trim().notEmpty().withMessage("Billing city is required"),
 
+    body("billingAddress.state").trim().notEmpty().withMessage("Billing state is required"),
 
-    body("billingAddress.city")
-        .trim()
-        .notEmpty()
-        .withMessage("Billing city is required"),
-
-
-    body("billingAddress.state")
-        .trim()
-        .notEmpty()
-        .withMessage("Billing state is required"),
-
-
-    body("billingAddress.country")
-        .trim()
-        .notEmpty()
-        .withMessage("Billing country is required"),
-
+    body("billingAddress.country").trim().notEmpty().withMessage("Billing country is required"),
 
     body("billingAddress.postalCode")
         .trim()
         .matches(/^[1-9][0-9]{5}$/)
         .withMessage("Invalid billing postal code"),
-
 
     // Shipping Address
 
@@ -106,11 +80,7 @@ export const createCustomerValidator = [
         .notEmpty()
         .withMessage("Shipping address line 1 is required"),
 
-
-    body("shippingAddress.addressLine2")
-        .optional()
-        .trim(),
-
+    body("shippingAddress.addressLine2").optional().trim(),
 
     body("shippingAddress.city")
         .optional()
@@ -118,13 +88,11 @@ export const createCustomerValidator = [
         .notEmpty()
         .withMessage("Shipping city is required"),
 
-
     body("shippingAddress.state")
         .optional()
         .trim()
         .notEmpty()
         .withMessage("Shipping state is required"),
-
 
     body("shippingAddress.country")
         .optional()
@@ -132,29 +100,23 @@ export const createCustomerValidator = [
         .notEmpty()
         .withMessage("Shipping country is required"),
 
-
     body("shippingAddress.postalCode")
         .optional()
         .trim()
         .matches(/^[1-9][0-9]{5}$/)
-        .withMessage("Invalid shipping postal code")
-
+        .withMessage("Invalid shipping postal code"),
 ];
-
-
 
 // ==============================
 // Update Customer Validator
 // ==============================
 
 export const updateCustomerValidator = [
-
     body("customerName")
         .optional()
         .trim()
         .isLength({ min: 3, max: 100 })
         .withMessage("Customer name must be between 3 and 100 characters"),
-
 
     body("email")
         .optional()
@@ -163,13 +125,11 @@ export const updateCustomerValidator = [
         .isEmail()
         .withMessage("Please provide a valid email address"),
 
-
     body("phone")
         .optional()
         .trim()
         .matches(/^[0-9]{10}$/)
         .withMessage("Phone number must contain exactly 10 digits"),
-
 
     body("companyName")
         .optional()
@@ -177,13 +137,11 @@ export const updateCustomerValidator = [
         .isLength({ min: 3, max: 100 })
         .withMessage("Company name must be between 3 and 100 characters"),
 
-
     body("gstNumber")
         .optional()
         .trim()
         .matches(/^[0-9A-Za-z]{15}$/)
         .withMessage("GST number must contain exactly 15 characters"),
-
 
     body("customerType")
         .optional()
@@ -191,13 +149,11 @@ export const updateCustomerValidator = [
         .isIn(["Individual", "Business"])
         .withMessage("Invalid customer type"),
 
-
     body("notes")
         .optional()
         .trim()
         .isLength({ max: 500 })
         .withMessage("Notes cannot exceed 500 characters"),
-
 
     body("billingAddress.addressLine1")
         .optional()
@@ -205,11 +161,7 @@ export const updateCustomerValidator = [
         .notEmpty()
         .withMessage("Billing address line 1 is required"),
 
-
-    body("billingAddress.addressLine2")
-        .optional()
-        .trim(),
-
+    body("billingAddress.addressLine2").optional().trim(),
 
     body("billingAddress.city")
         .optional()
@@ -217,13 +169,11 @@ export const updateCustomerValidator = [
         .notEmpty()
         .withMessage("Billing city is required"),
 
-
     body("billingAddress.state")
         .optional()
         .trim()
         .notEmpty()
         .withMessage("Billing state is required"),
-
 
     body("billingAddress.country")
         .optional()
@@ -231,13 +181,11 @@ export const updateCustomerValidator = [
         .notEmpty()
         .withMessage("Billing country is required"),
 
-
     body("billingAddress.postalCode")
         .optional()
         .trim()
         .matches(/^[1-9][0-9]{5}$/)
         .withMessage("Invalid billing postal code"),
-
 
     body("shippingAddress.addressLine1")
         .optional()
@@ -245,11 +193,7 @@ export const updateCustomerValidator = [
         .notEmpty()
         .withMessage("Shipping address line 1 is required"),
 
-
-    body("shippingAddress.addressLine2")
-        .optional()
-        .trim(),
-
+    body("shippingAddress.addressLine2").optional().trim(),
 
     body("shippingAddress.city")
         .optional()
@@ -257,13 +201,11 @@ export const updateCustomerValidator = [
         .notEmpty()
         .withMessage("Shipping city is required"),
 
-
     body("shippingAddress.state")
         .optional()
         .trim()
         .notEmpty()
         .withMessage("Shipping state is required"),
-
 
     body("shippingAddress.country")
         .optional()
@@ -271,11 +213,9 @@ export const updateCustomerValidator = [
         .notEmpty()
         .withMessage("Shipping country is required"),
 
-
     body("shippingAddress.postalCode")
         .optional()
         .trim()
         .matches(/^[1-9][0-9]{5}$/)
-        .withMessage("Invalid shipping postal code")
-
+        .withMessage("Invalid shipping postal code"),
 ];

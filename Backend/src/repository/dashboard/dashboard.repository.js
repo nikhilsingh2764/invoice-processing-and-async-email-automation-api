@@ -6,11 +6,10 @@ import { PAYMENT_STATUS } from "../../utils/invoice.constant.js";
 
 // Helper to escape special regex characters and prevent ReDoS / injection
 const escapeRegExp = (string) => {
-    return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 };
 
 class DashboardRepository {
-
     // Dashboard Statistics (Combined into a single $facet aggregation pipeline for invoices)
     async getDashboardStats(userId) {
         const objectUserId = new mongoose.Types.ObjectId(userId);
@@ -23,29 +22,27 @@ class DashboardRepository {
             Invoice.aggregate([
                 {
                     $match: {
-                        userId: objectUserId
-                    }
+                        userId: objectUserId,
+                    },
                 },
                 {
                     $facet: {
                         // 1. Total Invoice Count
-                        totalInvoices: [
-                            { $count: "count" }
-                        ],
+                        totalInvoices: [{ $count: "count" }],
                         // 2. Paid Invoices Count
                         paidInvoices: [
                             { $match: { status: PAYMENT_STATUS.PAID } },
-                            { $count: "count" }
+                            { $count: "count" },
                         ],
                         // 3. Pending Invoices Count
                         pendingInvoices: [
                             { $match: { status: PAYMENT_STATUS.PENDING } },
-                            { $count: "count" }
+                            { $count: "count" },
                         ],
                         // 4. Overdue Invoices Count (Pending + DueDate passed)
                         overdueInvoices: [
                             { $match: { status: PAYMENT_STATUS.PENDING, dueDate: { $lt: now } } },
-                            { $count: "count" }
+                            { $count: "count" },
                         ],
                         // 5. Financial Totals (Revenue collected via amountPaid & Outstanding balance)
                         financials: [
@@ -55,15 +52,15 @@ class DashboardRepository {
                                     totalRevenue: { $sum: "$amountPaid" },
                                     totalDueAmount: {
                                         $sum: {
-                                            $subtract: ["$grandTotal", "$amountPaid"]
-                                        }
-                                    }
-                                }
-                            }
-                        ]
-                    }
-                }
-            ])
+                                            $subtract: ["$grandTotal", "$amountPaid"],
+                                        },
+                                    },
+                                },
+                            },
+                        ],
+                    },
+                },
+            ]),
         ]);
 
         const stats = invoiceStatsResult[0] || {};
@@ -76,7 +73,7 @@ class DashboardRepository {
             pendingInvoices: stats.pendingInvoices?.[0]?.count || 0,
             overdueInvoices: stats.overdueInvoices?.[0]?.count || 0,
             totalRevenue: stats.financials?.[0]?.totalRevenue || 0,
-            totalDueAmount: stats.financials?.[0]?.totalDueAmount || 0
+            totalDueAmount: stats.financials?.[0]?.totalDueAmount || 0,
         };
     }
 
@@ -91,14 +88,11 @@ class DashboardRepository {
             startDate,
             endDate,
             sortBy = "createdAt",
-            sortOrder = "desc"
+            sortOrder = "desc",
         } = options;
 
         const safePage = Math.max(Number(page) || 1, 1);
-        const safeLimit = Math.min(
-            Math.max(Number(limit) || 10, 1),
-            100
-        );
+        const safeLimit = Math.min(Math.max(Number(limit) || 10, 1), 100);
 
         const allowedSortFields = [
             "createdAt",
@@ -106,17 +100,15 @@ class DashboardRepository {
             "dueDate",
             "grandTotal",
             "invoiceNumber",
-            "status"
+            "status",
         ];
 
-        const safeSortBy = allowedSortFields.includes(sortBy)
-            ? sortBy
-            : "createdAt";
+        const safeSortBy = allowedSortFields.includes(sortBy) ? sortBy : "createdAt";
 
         const safeSortOrder = sortOrder === "asc" ? 1 : -1;
 
         const filter = {
-            userId: new mongoose.Types.ObjectId(userId)
+            userId: new mongoose.Types.ObjectId(userId),
         };
 
         // Secure Search Handling (Prevents Array Pollution, ReDoS, and Crashes)
@@ -131,15 +123,15 @@ class DashboardRepository {
                 {
                     invoiceNumber: {
                         $regex: sanitizedSearch,
-                        $options: "i"
-                    }
+                        $options: "i",
+                    },
                 },
                 {
                     "customer.customerName": {
                         $regex: sanitizedSearch,
-                        $options: "i"
-                    }
-                }
+                        $options: "i",
+                    },
+                },
             ];
         }
 
@@ -178,7 +170,7 @@ class DashboardRepository {
                 .skip(skip)
                 .limit(safeLimit)
                 .lean(),
-            Invoice.countDocuments(filter)
+            Invoice.countDocuments(filter),
         ]);
 
         return {
@@ -187,11 +179,10 @@ class DashboardRepository {
                 totalDocs: totalCount,
                 totalPages: Math.ceil(totalCount / safeLimit),
                 currentPage: safePage,
-                limit: safeLimit
-            }
+                limit: safeLimit,
+            },
         };
     }
-
 }
 
 export default new DashboardRepository();

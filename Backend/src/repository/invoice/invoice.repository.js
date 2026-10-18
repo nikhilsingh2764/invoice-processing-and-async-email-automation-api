@@ -1,7 +1,6 @@
 import Invoice from "../../model/invoice/invoice.model.js";
 
 class InvoiceRepository {
-
     async create(userData, session = null) {
         const [invoice] = await Invoice.create([userData], { session });
         return invoice;
@@ -19,13 +18,13 @@ class InvoiceRepository {
         return await Invoice.findOneAndUpdate(
             {
                 _id: invoiceId,
-                userId
+                userId,
             },
             updatedData,
             {
                 new: true,
                 runValidators: true,
-                session
+                session,
             }
         );
     }
@@ -33,7 +32,6 @@ class InvoiceRepository {
     async deleteById(userId, invoiceId, session = null) {
         return await Invoice.findOneAndDelete({ _id: invoiceId, userId }, { session });
     }
-
 }
 
 export default new InvoiceRepository();

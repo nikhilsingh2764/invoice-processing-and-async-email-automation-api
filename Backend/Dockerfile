@@ -2,19 +2,13 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-ENV NODE_ENV=production
-
 COPY package*.json ./
-
-# Add --ignore-scripts to skip running 'prepare' scripts (like husky) in production
-RUN npm ci --omit=dev --ignore-scripts
+RUN npm ci
 
 COPY . .
 
-RUN chown -R node:node /app
-
-USER node
-
 EXPOSE 8000
 
-CMD ["npm", "start"]
+# Allow overriding command via build args or docker-compose command
+ARG EXEC_COMMAND="npm start"
+CMD ["sh", "-c", "${EXEC_COMMAND}"]

@@ -1,7 +1,4 @@
-
-
 export const PAYMENT_STATUS = {
-
     PAID: "Paid",
 
     PENDING: "Pending",
@@ -9,5 +6,4 @@ export const PAYMENT_STATUS = {
     OVERDUE: "Overdue",
 
     CANCELLED: "Cancelled",
-
 };
