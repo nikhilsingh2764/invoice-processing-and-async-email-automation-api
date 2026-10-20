@@ -102,6 +102,13 @@ const businessSchema = new mongoose.Schema(
             min: 1,
         },
 
+        nextInvoiceNumber: {
+            type: Number,
+            default: function () {
+                return this.invoiceStartNumber || 1;
+            },
+        },
+
         termsAndConditions: {
             type: String,
             trim: true,
@@ -114,3 +121,13 @@ const businessSchema = new mongoose.Schema(
 const Business = mongoose.model("Business", businessSchema);
 
 export default Business;
+
+
+
+
+
+
+
+
+
+

@@ -43,14 +43,27 @@ class BusinessRepository {
     async incrementInvoiceNumber(userId, session = null) {
         return await Business.findOneAndUpdate(
             { userId },
-            { $inc: { nextInvoiceNumber: 1 } },
-            {
-                new: false,
-                runValidators: true,
-                session,
-            }
+            [
+                {
+                    $set: {
+                        nextInvoiceNumber: {
+                            $cond: {
+                                if: { $gt: ["$nextInvoiceNumber", 0] },
+                                then: { $add: ["$nextInvoiceNumber", 1] },
+                                else: { $ifNull: ["$invoiceStartNumber", 1] }
+                            }
+                        }
+                    }
+                }
+            ],
+            { new: true, session }
         );
     }
+
+
+
+
+
 }
 
 export default new BusinessRepository();

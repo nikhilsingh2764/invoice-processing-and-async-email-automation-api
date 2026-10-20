@@ -6,6 +6,7 @@ import emailWorker from "./worker/email.worker.js";
 import invoicePDFWorker from "./worker/invoicePDF.worker.js";
 import invoiceEmailWorker from "./worker/invoiceEmail.worker.js";
 import logger from "./utils/logger.js";
+import connectDB from "./config/db.js";
 
 // Process-Level Error Handlers for Worker Process
 process.on("uncaughtException", (error) => {
@@ -28,6 +29,12 @@ process.on("unhandledRejection", (reason, promise) => {
 
 const startWorkers = async () => {
     try {
+        logger.info("Connecting to MongoDB for background workers...");
+
+        await connectDB();
+
+        logger.info("MongoDB connected successfully.");
+
         logger.info("Starting background worker process...");
 
         await scheduleOverdueJob();
