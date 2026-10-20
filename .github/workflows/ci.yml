@@ -1,56 +1,89 @@
-name: Invoice API CI
+name: Backend CI/CD Pipeline
 
 on:
   push:
-    branches:
-      - main
-
+    branches: [ main, master ]
   pull_request:
-    branches:
-      - main
+    branches: [ main, master ]
 
 jobs:
-  build:
+  build-and-test:
     runs-on: ubuntu-latest
+
+    services:
+      redis:
+        image: redis:alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      mongo:
+        image: mongo:latest
+        ports:
+          - 27017:27017
 
     defaults:
       run:
-        working-directory: Backend
+        working-directory: ./Backend
 
     steps:
-      - name: Checkout code
+      - name: Checkout Code
         uses: actions/checkout@v4
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
-          cache: npm
+          node-version: '20'
+          cache: 'npm'
           cache-dependency-path: Backend/package-lock.json
 
-      - name: Install dependencies
+      - name: Install Dependencies
         run: npm ci
 
-      - name: Build Docker image
-        run: docker build -t invoice-api .
+      - name: Run Linter / Prettier Check
+        run: npx prettier --check "src/**/*.js"
 
-      - name: Check Docker image
-        run: docker image inspect invoice-api
+      - name: Run Tests
+        run: npm test
+        env:
+          PORT: 5000
+          MONGO_URI: mongodb://localhost:27017/test-db
+          REDIS_HOST: localhost
+          REDIS_PORT: 6379
+          ACCESS_TOKEN_SECRET: test_access_secret_key_12345
+          REFRESH_TOKEN_SECRET: test_refresh_secret_key_12345
 
-      - name: Create CI environment file
-        run: touch .env
+  docker-build-check:
+    needs: build-and-test
+    runs-on: ubuntu-latest
 
-      - name: Check Docker Compose
-        run: docker compose config
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
 
-      - name: Deploy to Render
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        run: curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK }}"
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-      - name: Wait for deployment
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        run: sleep 60
+      # Build and validate API Image
+      - name: Build API Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./Backend
+          file: ./Backend/Dockerfile
+          push: false
+          tags: invoice-api:latest
 
-      - name: Health check
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        run: curl --fail https://invoice-backend-drqr.onrender.com/api/v1/health
+      # Build and validate Worker Image (passing the worker command override)
+      - name: Build Worker Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./Backend
+          file: ./Backend/Dockerfile
+          push: false
+          tags: invoice-worker:latest
+          build-args: |
+            EXEC_COMMAND=npm run worker
