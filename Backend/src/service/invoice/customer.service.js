@@ -3,6 +3,11 @@ import customerRepository from "../../repository/invoice/customer.repository.js"
 import logger from "../../utils/logger.js";
 import translate from "../../utils/translate.js";
 
+// Helper to escape special regex characters and prevent ReDoS / injection
+const escapeRegExp = (string) => {
+    return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+};
+
 export const createCustomerService = async (userData, language = "en") => {
     const customer = await customerRepository.create(userData);
 
@@ -26,10 +31,17 @@ export const getAllCustomersService = async (userId, queryFilters = {}, language
     const query = { userId };
 
     // 2. Add search filter if provided
-    if (queryFilters.search) {
+    // 2. Secure search filter handling (using customerName and escaped regex)
+    let search = queryFilters.search;
+    if (Array.isArray(search)) {
+        search = search[search.length - 1];
+    }
+
+    if (search && typeof search === "string" && search.trim()) {
+        const sanitizedSearch = escapeRegExp(search.trim());
         query.$or = [
-            { name: { $regex: queryFilters.search, $options: "i" } },
-            { email: { $regex: queryFilters.search, $options: "i" } },
+            { customerName: { $regex: sanitizedSearch, $options: "i" } },
+            { email: { $regex: sanitizedSearch, $options: "i" } },
         ];
     }
 
