@@ -69,8 +69,8 @@ class UserRepository {
 
     //DELETE
 
-    async findByIdAndDelete(id) {
-        return await User.findByIdAndDelete(id);
+    async findByIdAndDelete(id, session = null) {
+        return await User.findByIdAndDelete(id, { session });
     }
 
     async deactivateAccount(id) {

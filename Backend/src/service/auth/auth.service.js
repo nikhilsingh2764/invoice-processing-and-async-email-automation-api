@@ -22,6 +22,7 @@ import Customer from "../../model/invoice/customer.model.js";
 import Product from "../../model/invoice/product.model.js";
 import Invoice from "../../model/invoice/invoice.model.js";
 
+import mongoose from "mongoose";
 
 const SALT_ROUNDS = 10;
 
