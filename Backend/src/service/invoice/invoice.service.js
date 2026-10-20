@@ -408,15 +408,9 @@ export const duplicateInvoiceService = async (userId, invoiceId, language = "en"
             return newInvoice;
         });
     } catch (error) {
-
         logger.error(`Invoice duplication failed: ${error.message}`);
         throw error;
-
     } finally {
-
         await session.endSession();
-        
     }
 };
-
-

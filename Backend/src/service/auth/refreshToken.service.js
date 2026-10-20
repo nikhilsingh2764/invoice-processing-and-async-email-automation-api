@@ -32,7 +32,7 @@ const RefreshTokenService = async (refreshToken, language = "en") => {
         // RACE CONDITION GRACE PERIOD CHECK:
         // Check if this token was recently rotated (e.g., within the last 10 seconds).
         // This handles concurrent requests from multiple browser tabs seamlessly.
-        const recentlyRotatedToken = await refreshTokenRepository.findRecentlyRotatedByHash
+        const recentlyRotatedToken = (await refreshTokenRepository.findRecentlyRotatedByHash)
             ? await refreshTokenRepository.findRecentlyRotatedByHash(hashedIncomingToken)
             : null; // Fallback if your repo doesn't have this yet, or you can check token family/rotated records
 
@@ -46,7 +46,9 @@ const RefreshTokenService = async (refreshToken, language = "en") => {
 
         // If your repository retains rotated records with grace windows:
         if (recentlyRotatedToken && recentlyRotatedToken.replacementAccessToken) {
-            logger.warn(`Concurrent refresh race condition handled via grace period for user: ${decoded.id}`);
+            logger.warn(
+                `Concurrent refresh race condition handled via grace period for user: ${decoded.id}`
+            );
             return {
                 newAccessToken: recentlyRotatedToken.replacementAccessToken,
                 newRefreshToken: recentlyRotatedToken.replacementRefreshToken,
@@ -66,7 +68,7 @@ const RefreshTokenService = async (refreshToken, language = "en") => {
         throw new ApiError(
             403,
             translate("AUTH.TOKEN_REUSE_DETECTED", language) ||
-            "Security Alert: Refresh token reuse detected. Please log in again."
+                "Security Alert: Refresh token reuse detected. Please log in again."
         );
     }
 
@@ -116,11 +118,16 @@ const RefreshTokenService = async (refreshToken, language = "en") => {
         const val = parseInt(match[1], 10);
         const unit = match[2];
         switch (unit) {
-            case "d": return val * 24 * 60 * 60 * 1000;
-            case "h": return val * 60 * 60 * 1000;
-            case "m": return val * 60 * 1000;
-            case "s": return val * 1000;
-            default: return 15 * 24 * 60 * 60 * 1000;
+            case "d":
+                return val * 24 * 60 * 60 * 1000;
+            case "h":
+                return val * 60 * 60 * 1000;
+            case "m":
+                return val * 60 * 1000;
+            case "s":
+                return val * 1000;
+            default:
+                return 15 * 24 * 60 * 60 * 1000;
         }
     };
 
@@ -131,10 +138,10 @@ const RefreshTokenService = async (refreshToken, language = "en") => {
     const newTokenHash = hashToken(newRefreshToken);
 
     // 7 & 11. ROTATION WITH GRACE PERIOD STORAGE:
-    // Instead of completely deleting the old token instantly, mark it as rotated, 
+    // Instead of completely deleting the old token instantly, mark it as rotated,
     // attach the newly generated tokens, and set a short expiry window (e.g., 10 seconds) for race handling.
     const gracePeriodExpiry = new Date(Date.now() + 10 * 1000); // 10 seconds grace period
-    
+
     await refreshTokenRepository.updateByTokenHash(hashedIncomingToken, {
         isRevoked: true,
         replacementAccessToken: newAccessToken,

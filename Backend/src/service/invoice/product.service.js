@@ -69,16 +69,8 @@ export const getProductByIdService = async (productId, userId, language = "en") 
     return product;
 };
 
-
 export const updateProductService = async (productId, userId, rawUpdateData, language = "en") => {
-    const allowedUpdates = [
-        "name",
-        "description",
-        "price",
-        "category",
-        "unit",
-        "taxRate"
-    ];
+    const allowedUpdates = ["name", "description", "price", "category", "unit", "taxRate"];
 
     const updateData = {};
     for (const key of allowedUpdates) {
@@ -108,7 +100,6 @@ export const updateProductService = async (productId, userId, rawUpdateData, lan
     logger.info(`Product updated successfully: ${productId}`);
     return updatedProduct;
 };
-
 
 export const deleteProductService = async (productId, userId, language = "en") => {
     const product = await productRepository.findByIdAndUserId(productId, userId);

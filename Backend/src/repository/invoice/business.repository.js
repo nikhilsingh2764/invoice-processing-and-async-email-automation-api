@@ -50,20 +50,15 @@ class BusinessRepository {
                             $cond: {
                                 if: { $gt: ["$nextInvoiceNumber", 0] },
                                 then: { $add: ["$nextInvoiceNumber", 1] },
-                                else: { $ifNull: ["$invoiceStartNumber", 1] }
-                            }
-                        }
-                    }
-                }
+                                else: { $ifNull: ["$invoiceStartNumber", 1] },
+                            },
+                        },
+                    },
+                },
             ],
             { new: true, session }
         );
     }
-
-
-
-
-
 }
 
 export default new BusinessRepository();

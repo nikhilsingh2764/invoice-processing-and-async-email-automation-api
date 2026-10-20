@@ -2,7 +2,7 @@ import crypto from "crypto";
 
 const getSecretKey = () => {
     const keyEnv = process.env.CACHE_ENCRYPTION_KEY;
-    
+
     if (!keyEnv) {
         throw new Error("CACHE_ENCRYPTION_KEY is not defined in environment variables.");
     }
@@ -39,7 +39,7 @@ export const encryptBuffer = (buffer) => {
 
 export const decryptBuffer = (packedBuffer) => {
     const secretKey = getSecretKey();
-    
+
     const iv = packedBuffer.subarray(0, 12);
     const tag = packedBuffer.subarray(12, 28);
     const encrypted = packedBuffer.subarray(28);

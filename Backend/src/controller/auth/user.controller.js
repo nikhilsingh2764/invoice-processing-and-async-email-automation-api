@@ -127,7 +127,6 @@ export const DeleteAccount = TryCatch(async (req, res) => {
 });
 
 export const ForgotPassword = TryCatch(async (req, res) => {
-
     const { email } = req.body;
 
     await ForgotPasswordService(email, req.language);
@@ -135,7 +134,6 @@ export const ForgotPassword = TryCatch(async (req, res) => {
     return res
         .status(200)
         .json(new ApiResponse(200, translate("AUTH.FORGOT_PASSWORD_SUCCESS", req.language), null));
-
 });
 
 export const ResetPassword = TryCatch(async (req, res) => {

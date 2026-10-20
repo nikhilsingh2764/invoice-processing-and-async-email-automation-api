@@ -23,7 +23,7 @@ const invoiceEmailWorker = new Worker(
             throw new Error(`Invoice not found: ${invoiceId}`);
         }
 
-        // NOTE: The "if (invoice.sent)" check has been removed here 
+        // NOTE: The "if (invoice.sent)" check has been removed here
         // so that clicking send/resend multiple times will always send the email.
 
         // Generate PDF

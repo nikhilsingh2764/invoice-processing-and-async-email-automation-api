@@ -32,7 +32,7 @@ const metricsAuthMiddleware = (req, res, next) => {
             Buffer.from(username),
             Buffer.from(expectedUser)
         );
-        
+
         const passMatches = crypto.timingSafeEqual(
             Buffer.from(password),
             Buffer.from(expectedPass)

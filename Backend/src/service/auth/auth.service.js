@@ -16,7 +16,6 @@ import translate from "../../utils/translate.js";
 import logger from "../../utils/logger.js";
 import hashToken from "../../utils/hashToken.js";
 
-
 import Business from "../../model/invoice/Business.model.js";
 import Customer from "../../model/invoice/customer.model.js";
 import Product from "../../model/invoice/product.model.js";
@@ -51,7 +50,9 @@ export const SignupService = async (userdata, language = "en") => {
     const usernameExist = await userRepository.usernameExist(username);
 
     if (usernameExist) {
-        logger.info(`Signup attempted with existing username (generic response returned): ${username}`);
+        logger.info(
+            `Signup attempted with existing username (generic response returned): ${username}`
+        );
         // Return a generic success-like structure to prevent account/username enumeration
         return {
             email,
@@ -98,7 +99,7 @@ export const VerifyOTPService = async ({ email, otp }, language = "en") => {
         throw new ApiError(
             400,
             translate("AUTH.OTP_LOCKED", language) ||
-            "Too many failed attempts. OTP has been invalidated."
+                "Too many failed attempts. OTP has been invalidated."
         );
     }
 
@@ -113,7 +114,7 @@ export const VerifyOTPService = async ({ email, otp }, language = "en") => {
             throw new ApiError(
                 400,
                 translate("AUTH.OTP_LOCKED", language) ||
-                "Too many failed attempts. OTP has been invalidated."
+                    "Too many failed attempts. OTP has been invalidated."
             );
         } else {
             await redis.set(key, JSON.stringify(otpData), "KEEPTTL");
@@ -163,7 +164,6 @@ export const VerifyOTPService = async ({ email, otp }, language = "en") => {
 // LOGIN
 // =========================
 
-
 export const LoginService = async (userdata, language = "en") => {
     let { email, password } = userdata;
     email = email.trim().toLowerCase();
@@ -202,7 +202,6 @@ export const LoginService = async (userdata, language = "en") => {
     }
 
     if (user.lockUntil && user.lockUntil <= new Date()) {
-
         await userRepository.updateProfile(user._id, {
             failedLoginAttempts: 0,
             lockUntil: null,
@@ -210,14 +209,12 @@ export const LoginService = async (userdata, language = "en") => {
 
         user.failedLoginAttempts = 0;
         user.lockUntil = null;
-
     }
-
 
     if (!user.isVerified || !isPasswordMatch) {
         logger.warn(`Login failed - unverified account or incorrect password: ${email}`);
 
-        // 2. ATOMIC UPDATE: Increment failed attempts and lock account atomically 
+        // 2. ATOMIC UPDATE: Increment failed attempts and lock account atomically
         // to prevent read-modify-write race conditions and denial-of-service vectors.
         const currentAttempts = (user.failedLoginAttempts || 0) + 1;
         const updateData = {
@@ -364,7 +361,6 @@ export const UpdateProfileService = async (userId, data, language = "en") => {
 // =========================
 
 export const ForgotPasswordService = async (email, language = "en") => {
-
     email = email.trim().toLowerCase();
 
     const user = await userRepository.findByEmailWithoutPassword(email);
@@ -397,7 +393,6 @@ export const ForgotPasswordService = async (email, language = "en") => {
 // =========================
 
 export const ResetPasswordService = async ({ email, otp, newPassword }, language = "en") => {
-
     if (!email || !otp || !newPassword) {
         throw new ApiError(400, translate("AUTH.PASSWORDS_REQUIRED", language));
     }
@@ -441,7 +436,7 @@ export const ResetPasswordService = async ({ email, otp, newPassword }, language
         throw new ApiError(
             400,
             translate("AUTH.OTP_LOCKED", language) ||
-            "Too many failed attempts. OTP has been invalidated."
+                "Too many failed attempts. OTP has been invalidated."
         );
     }
 
@@ -456,7 +451,7 @@ export const ResetPasswordService = async ({ email, otp, newPassword }, language
             throw new ApiError(
                 400,
                 translate("AUTH.OTP_LOCKED", language) ||
-                "Too many failed attempts. OTP has been invalidated."
+                    "Too many failed attempts. OTP has been invalidated."
             );
         } else {
             await redis.set(key, JSON.stringify(otpData), "KEEPTTL");

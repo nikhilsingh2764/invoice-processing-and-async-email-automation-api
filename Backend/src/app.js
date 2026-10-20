@@ -24,7 +24,6 @@ import metricsMiddleware from "./middleware/metrics.middleware.js";
 import errorMiddleware from "./middleware/error.middleware.js";
 import csrfProtectionMiddleware from "./middleware/csrfProtectionMiddleware.js";
 
-
 import requestLogger from "./middleware/requestLogger.js";
 
 import swaggerUi from "swagger-ui-express";

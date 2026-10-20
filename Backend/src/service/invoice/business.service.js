@@ -64,8 +64,12 @@ export const getBusinessProfileService = async (userId, language = "en") => {
     return businessProfile;
 };
 
-export const updateBusinessProfileService = async (businessId, userId, rawUpdateData, language = "en") => {
-   
+export const updateBusinessProfileService = async (
+    businessId,
+    userId,
+    rawUpdateData,
+    language = "en"
+) => {
     const allowedUpdates = [
         "businessName",
         "email",
@@ -74,7 +78,7 @@ export const updateBusinessProfileService = async (businessId, userId, rawUpdate
         "gstNumber",
         "panNumber",
         "bankDetails",
-        "logo"
+        "logo",
     ];
 
     const updateData = {};

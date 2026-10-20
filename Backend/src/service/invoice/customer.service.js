@@ -79,7 +79,6 @@ export const getCustomerByIdService = async (customerId, userId, language = "en"
 };
 
 export const updateCustomerService = async (customerId, userId, rawUpdateData, language = "en") => {
-   
     // Define strictly allowed fields to prevent mass assignment (e.g. passing arbitrary userId or ownership overrides)
     const allowedUpdates = [
         "customerName",
@@ -90,7 +89,7 @@ export const updateCustomerService = async (customerId, userId, rawUpdateData, l
         "customerType",
         "notes",
         "billingAddress",
-        "shippingAddress"
+        "shippingAddress",
     ];
 
     const updateData = {};
