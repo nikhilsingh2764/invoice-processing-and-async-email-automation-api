@@ -393,6 +393,9 @@ export const duplicateInvoiceService = async (userId, invoiceId, language = "en"
                 duplicateInvoice.invoiceDate.getTime() + paymentDuration
             );
 
+            duplicateInvoice.sent = false;
+            duplicateInvoice.sentAt = null;
+
             // Create duplicated invoice using session
             const newInvoice = await invoiceRepository.create(duplicateInvoice, session);
 
@@ -405,9 +408,13 @@ export const duplicateInvoiceService = async (userId, invoiceId, language = "en"
             return newInvoice;
         });
     } catch (error) {
+
         logger.error(`Invoice duplication failed: ${error.message}`);
         throw error;
+
     } finally {
+
         await session.endSession();
+        
     }
 };
