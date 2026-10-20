@@ -8,12 +8,12 @@ import {
 const router = Router();
 
 // GET /api/v1/health/live -> Light liveness probe (Public container check)
-router.get("/live", livenessCheck);
+router.get("/health/live", livenessCheck);
 
 // GET /api/v1/health/ready -> Detailed readiness check (Verifies MongoDB & Redis)
-router.get("/ready", readinessCheck);
+router.get("/health/ready", readinessCheck);
 
 // GET /api/v1/health -> Combined health check endpoint
-router.get("/", healthCheck);
+router.get("/health", healthCheck);
 
 export default router;

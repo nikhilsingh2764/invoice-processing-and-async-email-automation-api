@@ -74,7 +74,7 @@ app.use("/api/v1", invoiceRoutes);
 
 app.use("/api/v1/dashboard", dashboardRoutes);
 
-app.use("/api/v1/health", healthRouter);
+app.use("/api/v1", healthRouter);
 
 app.use("/api/v1", metricsRouter);
 
