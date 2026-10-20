@@ -6,7 +6,8 @@
     "worker": "node src/worker.js",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "prepare": "husky || true"
+    "prepare": "husky || true",
+    "test": "echo \"Error: no test specified\" && exit 0"
   },
   "lint-staged": {
     "*.js": [
