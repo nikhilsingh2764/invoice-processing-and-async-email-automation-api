@@ -337,7 +337,7 @@ export const sendInvoiceEmailService = async (userId, invoiceId, language = "en"
             attempts: 3, // Retry up to 3 times if it fails
             backoff: {
                 type: "exponential",
-                delay: 2000, // Wait 2 seconds before the first retry, then increases
+                delay: 3000, // Wait 3 seconds before the first retry, then increases
             },
         }
     );
@@ -418,3 +418,5 @@ export const duplicateInvoiceService = async (userId, invoiceId, language = "en"
         
     }
 };
+
+

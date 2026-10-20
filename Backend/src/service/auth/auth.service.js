@@ -51,7 +51,11 @@ export const SignupService = async (userdata, language = "en") => {
     const usernameExist = await userRepository.usernameExist(username);
 
     if (usernameExist) {
-        throw new ApiError(409, translate("AUTH.USERNAME_ALREADY_EXISTS", language));
+        logger.info(`Signup attempted with existing username (generic response returned): ${username}`);
+        // Return a generic success-like structure to prevent account/username enumeration
+        return {
+            email,
+        };
     }
 
     await sendOTPService({
@@ -94,7 +98,7 @@ export const VerifyOTPService = async ({ email, otp }, language = "en") => {
         throw new ApiError(
             400,
             translate("AUTH.OTP_LOCKED", language) ||
-                "Too many failed attempts. OTP has been invalidated."
+            "Too many failed attempts. OTP has been invalidated."
         );
     }
 
@@ -109,7 +113,7 @@ export const VerifyOTPService = async ({ email, otp }, language = "en") => {
             throw new ApiError(
                 400,
                 translate("AUTH.OTP_LOCKED", language) ||
-                    "Too many failed attempts. OTP has been invalidated."
+                "Too many failed attempts. OTP has been invalidated."
             );
         } else {
             await redis.set(key, JSON.stringify(otpData), "KEEPTTL");
@@ -159,20 +163,32 @@ export const VerifyOTPService = async ({ email, otp }, language = "en") => {
 // LOGIN
 // =========================
 
+
 export const LoginService = async (userdata, language = "en") => {
     let { email, password } = userdata;
     email = email.trim().toLowerCase();
 
     const user = await userRepository.findByEmail(email);
 
+    // 1. Mitigate timing attacks: Always execute bcrypt.compare even if user doesn't exist
+    const dummyHash = "$2b$10$abcdefghijklmnopqrstuABCDEFGHIJKLMNOPQRSTUVWXYZ0123456";
+    const passwordHashToCompare = user ? user.password : dummyHash;
+    const isPasswordMatch = await bcrypt.compare(password, passwordHashToCompare);
+
+    // 2. Prevent account enumeration: Use generic unified checks where possible,
+    // or perform all validation silently without giving away distinct state clues.
     if (!user) {
         logger.warn(`Login failed - user not found: ${email}`);
         throw new ApiError(400, translate("AUTH.INVALID_PASSWORD", language));
     }
 
-    if (!user.isVerified) {
-        logger.warn(`Login attempted with unverified account: ${email}`);
-        throw new ApiError(400, translate("AUTH.EMAIL_NOT_VERIFIED", language));
+    if (user.provider === "GOOGLE") {
+        throw new ApiError(400, "Google accounts cannot use password authentication");
+    }
+
+    if (!user.isVerified || !isPasswordMatch) {
+        logger.warn(`Login failed - unverified account or incorrect password: ${email}`);
+        throw new ApiError(400, translate("AUTH.INVALID_PASSWORD", language));
     }
 
     if (!user.isActive) {
@@ -186,34 +202,34 @@ export const LoginService = async (userdata, language = "en") => {
     }
 
     if (user.lockUntil && user.lockUntil <= new Date()) {
-        user.failedLoginAttempts = 0;
-        user.lockUntil = null;
 
         await userRepository.updateProfile(user._id, {
             failedLoginAttempts: 0,
             lockUntil: null,
         });
+
+        user.failedLoginAttempts = 0;
+        user.lockUntil = null;
+
     }
 
-    if (user.provider === "GOOGLE") {
-        throw new ApiError(400, "Google accounts cannot use password authentication");
-    }
 
-    const isPasswordMatch = await bcrypt.compare(password, user.password);
+    if (!user.isVerified || !isPasswordMatch) {
+        logger.warn(`Login failed - unverified account or incorrect password: ${email}`);
 
-    if (!isPasswordMatch) {
-        user.failedLoginAttempts += 1;
+        // 2. ATOMIC UPDATE: Increment failed attempts and lock account atomically 
+        // to prevent read-modify-write race conditions and denial-of-service vectors.
+        const currentAttempts = (user.failedLoginAttempts || 0) + 1;
+        const updateData = {
+            failedLoginAttempts: currentAttempts,
+        };
 
-        if (user.failedLoginAttempts >= 5) {
-            user.lockUntil = new Date(Date.now() + 15 * 60 * 1000);
+        if (currentAttempts >= 5) {
+            updateData.lockUntil = new Date(Date.now() + 15 * 60 * 1000);
         }
 
-        await userRepository.updateProfile(user._id, {
-            failedLoginAttempts: user.failedLoginAttempts,
-            lockUntil: user.lockUntil,
-        });
+        await userRepository.updateProfile(user._id, updateData);
 
-        logger.warn(`Login failed - incorrect password: ${user._id}`);
         throw new ApiError(400, translate("AUTH.INVALID_PASSWORD", language));
     }
 
@@ -348,6 +364,7 @@ export const UpdateProfileService = async (userId, data, language = "en") => {
 // =========================
 
 export const ForgotPasswordService = async (email, language = "en") => {
+
     email = email.trim().toLowerCase();
 
     const user = await userRepository.findByEmailWithoutPassword(email);
@@ -380,6 +397,7 @@ export const ForgotPasswordService = async (email, language = "en") => {
 // =========================
 
 export const ResetPasswordService = async ({ email, otp, newPassword }, language = "en") => {
+
     if (!email || !otp || !newPassword) {
         throw new ApiError(400, translate("AUTH.PASSWORDS_REQUIRED", language));
     }
@@ -390,7 +408,12 @@ export const ResetPasswordService = async ({ email, otp, newPassword }, language
 
     if (!user) {
         logger.warn(`Password reset attempted for unknown email: ${email}`);
-        throw new ApiError(404, translate("AUTH.USER_NOT_FOUND", language));
+
+        // Dummy bcrypt comparison to prevent timing side-channel attacks
+        const dummyHash = "$2b$10$abcdefghijklmnopqrstuABCDEFGHIJKLMNOPQRSTUVWXYZ0123456";
+        await bcrypt.compare(String(otp), dummyHash);
+
+        throw new ApiError(400, translate("AUTH.INVALID_OTP", language));
     }
 
     if (user.provider === "GOOGLE") {
@@ -418,7 +441,7 @@ export const ResetPasswordService = async ({ email, otp, newPassword }, language
         throw new ApiError(
             400,
             translate("AUTH.OTP_LOCKED", language) ||
-                "Too many failed attempts. OTP has been invalidated."
+            "Too many failed attempts. OTP has been invalidated."
         );
     }
 
@@ -433,7 +456,7 @@ export const ResetPasswordService = async ({ email, otp, newPassword }, language
             throw new ApiError(
                 400,
                 translate("AUTH.OTP_LOCKED", language) ||
-                    "Too many failed attempts. OTP has been invalidated."
+                "Too many failed attempts. OTP has been invalidated."
             );
         } else {
             await redis.set(key, JSON.stringify(otpData), "KEEPTTL");

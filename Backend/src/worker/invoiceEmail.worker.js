@@ -11,7 +11,7 @@ import logger from "../utils/logger.js";
 const invoiceEmailWorker = new Worker(
     "invoice-email",
     async (job) => {
-        const { userId, invoiceId } = job.data;
+        const { userId, invoiceId, language } = job.data;
 
         logger.info(`Processing invoice email job: ${job.id}`);
 
@@ -23,13 +23,8 @@ const invoiceEmailWorker = new Worker(
             throw new Error(`Invoice not found: ${invoiceId}`);
         }
 
-        // --- IDEMPOTENCY CHECK ---
-        if (invoice.sent) {
-            logger.info(
-                `Invoice ${invoice.invoiceNumber} has already been sent. Skipping duplicate job/email.`
-            );
-            return { invoiceNumber: invoice.invoiceNumber, skipped: true };
-        }
+        // NOTE: The "if (invoice.sent)" check has been removed here 
+        // so that clicking send/resend multiple times will always send the email.
 
         // Generate PDF
         const pdfBuffer = await generateInvoicePDF(invoice);
@@ -52,7 +47,6 @@ const invoiceEmailWorker = new Worker(
         });
 
         // --- MARK AS SENT VIA REPOSITORY ---
-        // Assuming your repository has an update method (e.g., updateById, update, or updateStatus)
         await invoiceRepository.updateById(userId, invoiceId, { sent: true });
 
         logger.info(`Invoice email sent: ${invoice.invoiceNumber}`);

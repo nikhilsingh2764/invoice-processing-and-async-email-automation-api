@@ -64,37 +64,46 @@ export const getBusinessProfileService = async (userId, language = "en") => {
     return businessProfile;
 };
 
-export const updateBusinessProfileService = async ({
-    newBusinessData,
-    userId,
-    language = "en",
-}) => {
-    const accountExist = await businessRepository.existsByUserId(userId);
+export const updateBusinessProfileService = async (businessId, userId, rawUpdateData, language = "en") => {
+   
+    const allowedUpdates = [
+        "businessName",
+        "email",
+        "phone",
+        "address",
+        "gstNumber",
+        "panNumber",
+        "bankDetails",
+        "logo"
+    ];
 
-    if (!accountExist) {
-        logger.warn(`Business profile update attempted for non-existing profile: ${userId}`);
+    const updateData = {};
+    for (const key of allowedUpdates) {
+        if (rawUpdateData[key] !== undefined) {
+            updateData[key] = rawUpdateData[key];
+        }
+    }
 
+    const business = await businessRepository.findByIdAndUserId(businessId, userId);
+
+    if (!business) {
+        logger.warn(`Business update attempted for non-existing business: ${businessId}`);
         throw new ApiError(404, translate("BUSINESS.BUSINESS_NOT_FOUND", language));
     }
 
-    const updatedData = await businessRepository.updateByUserId(userId, newBusinessData);
+    const updatedBusiness = await businessRepository.updateByIdAndUserId(
+        businessId,
+        userId,
+        updateData
+    );
 
-    if (!updatedData) {
-        logger.error(`Business profile update failed: ${userId}`);
-
+    if (!updatedBusiness) {
+        logger.error(`Business update failed: ${businessId}`);
         throw new ApiError(500, translate("BUSINESS.BUSINESS_UPDATE_FAILED", language));
     }
 
-    // Remove old Redis cache immediately
-    const cacheKey = `business:${userId}`;
-    await redis.del(cacheKey);
-
-    // Store updated business profile with fresh 60s TTL
-    await redis.set(cacheKey, JSON.stringify(updatedData), "EX", 60);
-
-    logger.info(`Business profile updated successfully: ${userId}`);
-
-    return updatedData;
+    logger.info(`Business updated successfully: ${businessId}`);
+    return updatedBusiness;
 };
 
 export const deleteBusinessProfileService = async (userId, language = "en") => {

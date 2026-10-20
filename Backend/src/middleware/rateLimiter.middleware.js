@@ -115,15 +115,16 @@ export const refreshTokenLimiter = rateLimit({
 // ==============================
 // General API Limiter
 // For authenticated routes
-// 200 requests / 15 minutes
+// 100 requests / 15 minutes
 // ==============================
 
 export const apiLimiter = rateLimit({
     store: createStore("api:"),
     windowMs: 15 * 60 * 1000,
-    max: 200,
+    max: 100,
     standardHeaders: true,
     legacyHeaders: false,
+    passOnStoreError: true,
     message: {
         success: false,
         message: "Too many requests. Please try again later.",

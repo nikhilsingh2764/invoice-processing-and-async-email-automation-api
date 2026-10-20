@@ -78,7 +78,28 @@ export const getCustomerByIdService = async (customerId, userId, language = "en"
     return customer;
 };
 
-export const updateCustomerService = async (customerId, userId, updateData, language = "en") => {
+export const updateCustomerService = async (customerId, userId, rawUpdateData, language = "en") => {
+   
+    // Define strictly allowed fields to prevent mass assignment (e.g. passing arbitrary userId or ownership overrides)
+    const allowedUpdates = [
+        "customerName",
+        "email",
+        "phone",
+        "companyName",
+        "gstNumber",
+        "customerType",
+        "notes",
+        "billingAddress",
+        "shippingAddress"
+    ];
+
+    const updateData = {};
+    for (const key of allowedUpdates) {
+        if (rawUpdateData[key] !== undefined) {
+            updateData[key] = rawUpdateData[key];
+        }
+    }
+
     const customer = await customerRepository.findByIdAndUserId(customerId, userId);
 
     if (!customer) {

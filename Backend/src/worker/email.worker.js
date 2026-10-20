@@ -30,6 +30,14 @@ const emailWorker = new Worker(
     {
         connection: redis,
         concurrency: 5,
+        removeOnComplete: {
+            age: 3600,
+            count: 100,
+        },
+        removeOnFail: {
+            age: 2 * 3600,
+            count: 100,
+        },
     }
 );
 

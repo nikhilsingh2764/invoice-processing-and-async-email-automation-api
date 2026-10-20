@@ -22,6 +22,8 @@ import metricsRouter from "./route/metrics/metrics.routes.js";
 
 import metricsMiddleware from "./middleware/metrics.middleware.js";
 import errorMiddleware from "./middleware/error.middleware.js";
+import csrfProtectionMiddleware from "./middleware/csrfProtectionMiddleware.js";
+
 
 import requestLogger from "./middleware/requestLogger.js";
 
@@ -49,6 +51,8 @@ app.use(mongoSanitize());
 app.use(middleware.handle(i18next));
 
 app.use(cookieParser());
+
+app.use(csrfProtectionMiddleware);
 
 app.use(requestLogger);
 
@@ -81,13 +85,7 @@ app.get("/health", (req, res) => {
     });
 });
 
-if (process.env.NODE_ENV !== "production") {
-    app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
-} else {
-    app.use("/api-docs", (req, res) => {
-        res.status(403).json({ error: "API documentation is disabled in production." });
-    });
-}
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // Global Error Handler (ALWAYS LAST)
 app.use(errorMiddleware);
