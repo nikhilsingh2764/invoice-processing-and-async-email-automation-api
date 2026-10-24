@@ -1,0 +1,46 @@
+/* Motion system: purposeful, transform and opacity only, disabled under reduced motion. */
+@layer components {
+  .reveal { opacity: 0; transform: translateY(12px); transition: opacity var(--dur-page) var(--ease), transform var(--dur-page) var(--ease); transition-delay: calc(var(--i, 0) * 60ms); }
+  .reveal[data-in='true'] { opacity: 1; transform: none; }
+
+  .route-enter { animation: route-in var(--dur-page) var(--ease) both; }
+  @keyframes route-in { from { opacity: 0; transform: translateX(8px); } to { opacity: 1; transform: none; } }
+
+  .draw-check path { stroke-dasharray: 24; stroke-dashoffset: 24; animation: draw 400ms var(--ease) forwards; }
+  @keyframes draw { to { stroke-dashoffset: 0; } }
+
+  .flow-box { opacity: 0; animation: flow-in var(--dur-data) var(--ease) forwards; animation-delay: calc(var(--i, 0) * 120ms); }
+  .flow-line { stroke-dasharray: 100; stroke-dashoffset: 100; animation: draw-line var(--dur-data) var(--ease) forwards; animation-delay: calc(var(--i, 0) * 120ms + 100ms); }
+  @keyframes flow-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+  @keyframes draw-line { to { stroke-dashoffset: 0; } }
+
+  .gauge-value { transition: stroke-dashoffset var(--dur-data) var(--ease); }
+
+  ::view-transition-old(root), ::view-transition-new(root) { animation-duration: var(--dur-page); animation-timing-function: var(--ease); }
+  ::view-transition-old(root) { animation-name: vt-out; }
+  ::view-transition-new(root) { animation-name: vt-in; }
+  @keyframes vt-out { to { opacity: 0; transform: translateX(-8px); } }
+  @keyframes vt-in { from { opacity: 0; transform: translateX(8px); } }
+
+  /* Hero invoice */
+  .hero-line { display: block; block-size: 10px; border-radius: var(--r-full); background: var(--hairline); inline-size: 0; animation: fill-line 700ms var(--ease) forwards; animation-delay: calc(var(--i, 0) * 150ms + 300ms); }
+  @keyframes fill-line { to { inline-size: var(--w, 100%); } }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    animation-delay: 0ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .reveal { opacity: 1; transform: none; }
+  .skeleton { animation: none; }
+  .flow-box { opacity: 1; }
+  .flow-line { stroke-dashoffset: 0; }
+  .hero-line { inline-size: var(--w, 100%); }
+  .stamp[data-animate='true'] { animation: none; }
+  .spinner { animation-duration: 1.6s !important; animation-iteration-count: infinite !important; }
+  ::view-transition-old(root), ::view-transition-new(root) { animation: none; }
+}

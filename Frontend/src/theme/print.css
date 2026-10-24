@@ -1,0 +1,23 @@
+/* Print: black ink on white, solid rules, no shadow, fold or chrome. Used by the invoice sheet and legal pages. */
+@media print {
+  :root, :root[data-theme='dark'] {
+    --desk: white; --surface: white; --raised: white; --sunken: white;
+    --text: black; --ink: black; --muted: black; --hairline: black; --rule: black; --rule-strong: black; --border-strong: black;
+    --st-paid: black; --st-pending: black; --st-overdue: black; --st-partial: black; --st-draft: black; --st-cancelled: black;
+    --st-paid-bg: white; --st-pending-bg: white; --st-overdue-bg: white; --st-partial-bg: white; --st-draft-bg: white; --st-cancelled-bg: white;
+    --brand: black; --brand-text: black;
+  }
+  html, body { background: white; color: black; font-size: 12pt; }
+  .sidebar, .topbar, .bottom-nav, .site-header, .site-footer, .cookie-bar, .banner, .toast-region, .no-print, .toc, .skip-link, .letterhead-actions, .legacy-banner, .top-progress { display: none; }
+  .app-shell { display: block; }
+  .main-area { padding: 0; }
+  .sheet, .sheet-a4 { box-shadow: none; border: 0; border-radius: 0; max-inline-size: none; padding: 0; }
+  .sheet-fold::before, .perforation { display: none; }
+  .stamp { border-color: black; transform: none; animation: none; }
+  .ledger th { position: static; }
+  .ledger td, .ledger th { border-color: black; }
+  .ledger tr, .totals, .parties { break-inside: avoid; }
+  a { color: black; text-decoration: none; }
+  .prose a[href^='http']::after { content: ' (' attr(href) ')'; font-size: 10pt; }
+  @page { margin: 16mm; }
+}

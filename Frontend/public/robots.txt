@@ -1,0 +1,15 @@
+User-agent: *
+Allow: /
+Disallow: /dashboard
+Disallow: /invoices
+Disallow: /customers
+Disallow: /products
+Disallow: /business
+Disallow: /account
+Disallow: /login
+Disallow: /signup
+Disallow: /verify-otp
+Disallow: /forgot-password
+Disallow: /reset-password
+
+Sitemap: https://REPLACE_ME.example/sitemap.xml

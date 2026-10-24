@@ -1,0 +1,40 @@
+name: Frontend CI
+on:
+  push:
+    branches: [main]
+    paths: ['Frontend/**']
+  pull_request:
+    paths: ['Frontend/**']
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    working-directory: Frontend
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          # Add `cache: npm` and `cache-dependency-path: Frontend/package-lock.json` once the lockfile is committed.
+      # `npm ci` needs a lockfile. Commit package-lock.json after your first `npm install`.
+      - name: Install
+        run: |
+          if [ -f package-lock.json ]; then npm ci; else echo "::warning::No package-lock.json committed; falling back to npm install"; npm install; fi
+      - name: Lint
+        run: npm run lint
+      - name: Contrast
+        run: npm run contrast
+      - name: Test
+        run: npm test
+      - name: Build
+        run: npm run build
+      - name: Bundle budget
+        run: npm run check:bundle
+      - name: Audit (high and critical)
+        run: npm audit --audit-level=high

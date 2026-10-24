@@ -1,65 +1,77 @@
-const NUMBER_FALLBACK = new Intl.NumberFormat(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+import { ZERO_DECIMAL_CURRENCIES } from '../config/enums.js'
 
-export function formatMoney(value, currency) {
-  const n = Number(value);
-  if (!Number.isFinite(n)) return '—';
-  if (!currency) return NUMBER_FALLBACK.format(n);
+const cache = new Map()
+const localeFor = (currency) => (currency === 'INR' ? 'en-IN' : undefined)
+
+/** Strategy: pick the formatter by currency. Zero-decimal currencies show no decimals. */
+export function moneyFormatter(currency = 'INR', { compact = false } = {}) {
+  const key = `${currency}|${compact}`
+  if (cache.has(key)) return cache.get(key)
+  const zero = ZERO_DECIMAL_CURRENCIES.includes(currency)
+  let fmt
   try {
-    return new Intl.NumberFormat(undefined, { style: 'currency', currency }).format(n);
+    fmt = new Intl.NumberFormat(localeFor(currency), {
+      style: 'currency',
+      currency,
+      notation: compact ? 'compact' : 'standard',
+      minimumFractionDigits: compact ? 0 : zero ? 0 : 2,
+      maximumFractionDigits: compact ? 1 : zero ? 0 : 2,
+    })
   } catch {
-    return `${currency} ${NUMBER_FALLBACK.format(n)}`;
+    fmt = new Intl.NumberFormat(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
   }
+  cache.set(key, fmt)
+  return fmt
 }
 
-export function formatCompactMoney(value, currency) {
-  const n = Number(value);
-  if (!Number.isFinite(n)) return '';
-  try {
-    return new Intl.NumberFormat(undefined, {
-      notation: 'compact',
-      maximumFractionDigits: 1,
-      ...(currency ? { style: 'currency', currency } : {}),
-    }).format(n);
-  } catch {
-    return String(n);
-  }
+export function formatMoney(value, currency = 'INR', options) {
+  const n = Number(value)
+  return moneyFormatter(currency, options).format(Number.isFinite(n) ? n : 0)
 }
 
-export const formatNumber = (v) => (Number.isFinite(Number(v)) ? new Intl.NumberFormat().format(Number(v)) : '—');
+export const formatNumber = (value) => new Intl.NumberFormat(undefined).format(Number(value) || 0)
 
-function toDate(value) {
-  const d = value instanceof Date ? value : new Date(value);
-  return Number.isNaN(d.getTime()) ? null : d;
+export function formatDate(value, { withTime = false } = {}) {
+  if (!value) return '—'
+  const d = value instanceof Date ? value : new Date(value)
+  if (Number.isNaN(d.getTime())) return '—'
+  return new Intl.DateTimeFormat(undefined, { day: '2-digit', month: 'short', year: 'numeric', ...(withTime ? { hour: '2-digit', minute: '2-digit' } : {}) }).format(d)
 }
 
-export function formatDate(value, { utc = false } = {}) {
-  const d = toDate(value);
-  if (!d) return '—';
-  return new Intl.DateTimeFormat(undefined, { day: '2-digit', month: 'short', year: 'numeric', ...(utc ? { timeZone: 'UTC' } : {}) }).format(d);
+export function toDateInput(value) {
+  const d = value instanceof Date ? value : new Date(value)
+  if (Number.isNaN(d.getTime())) return ''
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
-export function formatDateTime(value) {
-  const d = toDate(value);
-  if (!d) return '—';
-  return new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(d);
+export function addDays(date, days) {
+  const d = new Date(date)
+  d.setDate(d.getDate() + days)
+  return d
 }
 
-/** Value for <input type="date"> from an ISO string (date part, UTC — matches how the API stores it). */
-export const toDateInputValue = (iso) => (iso ? String(iso).slice(0, 10) : '');
-
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-export const monthLabel = (year, month) => `${MONTHS[(month || 1) - 1]} ${String(year).slice(-2)}`;
-
-/** Mirrors the backend rule used by the dashboard's `overdueInvoices` stat: Pending and past due date. */
-export function isPastDue(invoice) {
-  if (invoice?.status !== 'Pending' && invoice?.paymentStatus !== 'Pending') return false;
-  const d = toDate(invoice?.dueDate);
-  return Boolean(d && d.getTime() < Date.now());
+export function startOfToday() {
+  const d = new Date()
+  d.setHours(0, 0, 0, 0)
+  return d
 }
 
-export const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+/** Pending invoices whose due date has passed are "past due" (the stored status is untouched). */
+export function isPastDue(invoice, now = new Date()) {
+  if (!invoice || invoice.status !== 'Pending' || !invoice.dueDate) return false
+  const due = new Date(invoice.dueDate)
+  return !Number.isNaN(due.getTime()) && due.getTime() < now.getTime()
+}
 
-export function formatAddress(a) {
-  if (!a) return '';
-  return [a.addressLine1, a.addressLine2, a.city, a.state, a.postalCode, a.country].filter(Boolean).join(', ');
+export const monthLabel = (year, month) => new Intl.DateTimeFormat(undefined, { month: 'short', year: '2-digit' }).format(new Date(year, month - 1, 1))
+
+export function initials(name) {
+  return (
+    String(name || '?')
+      .split(/[\s_]+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((p) => p[0].toUpperCase())
+      .join('') || '?'
+  )
 }

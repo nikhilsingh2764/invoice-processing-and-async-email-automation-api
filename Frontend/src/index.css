@@ -1,0 +1,10 @@
+@layer theme, tokens, base, components, utilities;
+@import 'tailwindcss';
+@import '@fontsource-variable/bricolage-grotesque/wght.css';
+@import '@fontsource-variable/figtree/wght.css';
+@import './theme/tokens.css';
+@import './theme/base.css';
+@import './theme/components.css';
+@import './theme/patterns.css';
+@import './theme/motion.css';
+@import './theme/print.css';

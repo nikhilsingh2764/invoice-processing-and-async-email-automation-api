@@ -1,24 +1,40 @@
 <!doctype html>
-<html lang="en">
+<html lang="en-IN" data-theme="light">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="color-scheme" content="light dark" />
-    <meta name="description" content="InvoicePilot — create, send and track invoices." />
-    <title>InvoicePilot</title>
-    <script>
-      (function () {
-        try {
-          var t = localStorage.getItem('invoicepilot-theme') || 'system';
-          var dark = t === 'dark' || (t === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
-          if (dark) document.documentElement.classList.add('dark');
-        } catch (e) {}
-      })();
-    </script>
+    <meta name="theme-color" content="#FBF7F2" />
+    <script src="/theme-init.js"></script>
+
+    <title>InvoicePilot: invoices, PDFs and email delivery</title>
+    <meta name="description" content="Create invoices, send them by email and download PDFs. InvoicePilot is free to use and keeps your session in HttpOnly cookies." />
+    <link rel="canonical" href="https://REPLACE_ME.example/" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="InvoicePilot" />
+    <meta property="og:title" content="InvoicePilot: invoices, PDFs and email delivery" />
+    <meta property="og:description" content="Create invoices, send them by email and download PDFs. Free to use." />
+    <meta property="og:image" content="https://REPLACE_ME.example/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="InvoicePilot" />
+    <meta name="twitter:description" content="Create invoices, send them by email and download PDFs." />
+    <meta name="twitter:image" content="https://REPLACE_ME.example/og-image.png" />
+
+    <link rel="icon" href="/favicon.ico" sizes="48x48" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
   </head>
   <body>
     <div id="root"></div>
+    <noscript>
+      <div class="noscript-message">
+        <h1>InvoicePilot needs JavaScript</h1>
+        <p>Turn JavaScript on in your browser settings and reload this page to use InvoicePilot.</p>
+      </div>
+    </noscript>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

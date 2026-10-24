@@ -1,89 +1,114 @@
-import { useEffect, useState } from 'react';
-import { Link, Outlet, useLocation } from 'react-router-dom';
-import { Menu, Plus, X } from 'lucide-react';
-import Sidebar from '../components/navigation/Sidebar';
-import UserMenu from '../components/navigation/UserMenu';
-import ThemeToggle from '../components/common/ThemeToggle';
-import Alert from '../components/feedback/Alert';
-import { buttonClasses } from '../components/common/button-styles';
-import { dismissStaleNotice, useStaleNotice } from '../lib/staleNotice';
-import { DASHBOARD_CACHE_MINUTES } from '../lib/constants';
+import { useCallback, useState } from 'react'
+import { Link, NavLink, Outlet, useNavigate } from 'react-router'
+import { PanelLeftClose, PanelLeftOpen, Plus, Search } from 'lucide-react'
+import { Logo, LogoMark } from '../components/ui/Logo.jsx'
+import { Button } from '../components/ui/Button.jsx'
+import { Icon } from '../components/ui/Icon.jsx'
+import { APP_NAV } from '../components/layout/nav.js'
+import { ThemeMenu } from '../components/layout/ThemeMenu.jsx'
+import { Avatar, UserMenu } from '../components/layout/UserMenu.jsx'
+import { CommandPalette, IdleDialog, ShortcutsDialog } from '../components/layout/Dialogs.jsx'
+import { PolicyNotice } from '../components/layout/Banners.jsx'
+import { useAuth } from '../hooks/useAuth.jsx'
+import { useHotkeys } from '../hooks/useHotkeys.js'
+import { useIdleTimeout } from '../hooks/useIdleTimeout.js'
+import { storage } from '../lib/storage.js'
+import { useMediaQuery } from '../hooks/useMediaQuery.js'
+
+import { useNoIndex } from '../hooks/useSeo.js'
 
 export default function AppLayout() {
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const { pathname } = useLocation();
-  const staleNotice = useStaleNotice();
+  useNoIndex()
+  const { user, logout, clearSession } = useAuth()
+  const navigate = useNavigate()
+  const [collapsed, setCollapsed] = useState(() => storage.get('ip.sidebar') === 'collapsed')
+  const [palette, setPalette] = useState(false)
+  const [help, setHelp] = useState(false)
+  const desktop = useMediaQuery('(min-width: 1024px)')
 
-  // Close the mobile drawer on navigation (state adjusted during render, no effect needed).
-  const [lastPath, setLastPath] = useState(pathname);
-  if (lastPath !== pathname) {
-    setLastPath(pathname);
-    setDrawerOpen(false);
-  }
+  const idle = useIdleTimeout({
+    enabled: true,
+    onTimeout: () => {
+      logout().then(() => clearSession({ notice: 'You were signed out after a period of inactivity.' }))
+    },
+  })
 
-  useEffect(() => {
-    if (!drawerOpen) return undefined;
-    const onKey = (e) => e.key === 'Escape' && setDrawerOpen(false);
-    document.addEventListener('keydown', onKey);
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.removeEventListener('keydown', onKey);
-      document.body.style.overflow = '';
-    };
-  }, [drawerOpen]);
+  useHotkeys({
+    'mod+k': () => setPalette(true),
+    '?': () => setHelp(true),
+    'g d': () => navigate('/dashboard'),
+    'g i': () => navigate('/invoices'),
+    'g c': () => navigate('/customers'),
+    'g p': () => navigate('/products'),
+    n: () => navigate('/invoices/new'),
+  })
+
+  const toggle = useCallback(() => {
+    setCollapsed((v) => {
+      storage.set('ip.sidebar', v ? 'expanded' : 'collapsed')
+      return !v
+    })
+  }, [])
 
   return (
-    <div className="min-h-dvh">
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 border-r border-line lg:block">
-        <Sidebar />
-      </aside>
-
-      {drawerOpen && (
-        <div className="fixed inset-0 z-50 lg:hidden" role="dialog" aria-modal="true" aria-label="Navigation">
-          <div className="absolute inset-0 bg-[var(--overlay)]" onClick={() => setDrawerOpen(false)} aria-hidden />
-          <div className="pop-in absolute inset-y-0 left-0 w-72 max-w-[85vw] border-r border-line shadow-modal">
-            <button
-              type="button"
-              onClick={() => setDrawerOpen(false)}
-              aria-label="Close navigation"
-              className="absolute right-3 top-4 z-10 rounded-lg p-1.5 text-fg-subtle hover:bg-surface-2"
-            >
-              <X className="size-5" />
-            </button>
-            <Sidebar onNavigate={() => setDrawerOpen(false)} />
+    <div className="app-shell" data-collapsed={collapsed ? 'true' : undefined}>
+      <aside className="sidebar" aria-label="Sidebar">
+        <Link to="/dashboard" className="sidebar-brand" aria-label="InvoicePilot dashboard">
+          {collapsed ? <LogoMark /> : <Logo />}
+        </Link>
+        <nav className="sidebar-nav" aria-label="Primary">
+          {APP_NAV.map((n) => (
+            <NavLink key={n.to} to={n.to} className="sidebar-link" title={collapsed ? n.label : undefined}>
+              <Icon as={n.icon} />
+              <span className="sidebar-label">{n.label}</span>
+            </NavLink>
+          ))}
+        </nav>
+        <Button variant="ghost" size="sm" icon={collapsed ? PanelLeftOpen : PanelLeftClose} onClick={toggle} aria-pressed={collapsed}>
+          {collapsed ? 'Expand' : 'Collapse'}
+        </Button>
+        <div className="sidebar-user">
+          <Avatar name={user?.username} />
+          <div className="sidebar-user-text">
+            <div className="truncate-text" style={{ fontWeight: 600 }}>{user?.username}</div>
+            <div className="truncate-text muted">{user?.email}</div>
           </div>
         </div>
-      )}
+      </aside>
 
-      <div className="lg:pl-64">
-        <header className="sticky top-0 z-20 flex h-16 items-center gap-2 border-b border-line bg-surface/90 px-3 backdrop-blur sm:px-6">
-          <button
-            type="button"
-            onClick={() => setDrawerOpen(true)}
-            aria-label="Open navigation"
-            className="grid size-10 place-items-center rounded-lg text-fg-muted hover:bg-surface-2 lg:hidden"
-          >
-            <Menu className="size-5" />
+      <div style={{ minInlineSize: 0 }}>
+        <PolicyNotice />
+        <header className="topbar">
+          <Link to="/dashboard" className="mobile-only" aria-label="InvoicePilot dashboard" style={{ display: desktop ? 'none' : undefined }}><LogoMark /></Link>
+          <button type="button" className="topbar-search" onClick={() => setPalette(true)}>
+            <Icon as={Search} size={16} />
+            <span style={{ flex: 1, textAlign: 'start' }}>Search or jump to…</span>
+            <kbd className="kbd">Ctrl K</kbd>
           </button>
-          <div className="ml-auto flex items-center gap-1.5 sm:gap-2">
-            <Link to="/invoices/new" className={buttonClasses({ size: 'sm', className: 'hidden sm:inline-flex' })}>
-              <Plus className="size-4" aria-hidden /> New invoice
-            </Link>
-            <ThemeToggle />
-            <UserMenu />
-          </div>
+          <span className="topbar-title" />
+          <Button variant="primary" size="sm" icon={Plus} onClick={() => navigate('/invoices/new')} className="hide-sm">New invoice</Button>
+          <Button variant="ghost" iconOnly icon={Search} onClick={() => setPalette(true)} className="mobile-only">Open command palette</Button>
+          <ThemeMenu showDensity />
+          <UserMenu onShortcuts={() => setHelp(true)} />
         </header>
-
-        <main className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:py-8">
-          {staleNotice && (
-            <Alert tone="info" className="mb-5" onDismiss={dismissStaleNotice}>
-              Invoice lists and dashboard totals are cached by the server for up to {DASHBOARD_CACHE_MINUTES} minutes,
-              so recent changes may take a while to show up there. Individual invoice pages are always current.
-            </Alert>
-          )}
+        <main id="main" className="main-area">
           <Outlet />
         </main>
       </div>
+
+      <nav className="bottom-nav" aria-label="Primary mobile">
+        {APP_NAV.slice(0, 2).map((n) => (
+          <NavLink key={n.to} to={n.to} className="bottom-link"><Icon as={n.icon} />{n.label}</NavLink>
+        ))}
+        <Link to="/invoices/new" className="bottom-fab" aria-label="New invoice"><Icon as={Plus} size={24} /></Link>
+        {APP_NAV.slice(2, 4).map((n) => (
+          <NavLink key={n.to} to={n.to} className="bottom-link"><Icon as={n.icon} />{n.label}</NavLink>
+        ))}
+      </nav>
+
+      <CommandPalette open={palette} onClose={() => setPalette(false)} />
+      <ShortcutsDialog open={help} onClose={() => setHelp(false)} />
+      <IdleDialog open={idle.warning} secondsLeft={idle.secondsLeft} onStay={idle.stay} onLogout={() => logout()} />
     </div>
-  );
+  )
 }

@@ -1,0 +1,239 @@
+/* Design tokens. Every colour, size and duration used by the UI is defined here once.
+   Light is the default; [data-theme="dark"] is set before first paint by public/theme-init.js. */
+@layer tokens {
+  :root {
+    /* Brand */
+    --brand: #F26A1B;
+    --brand-deep: #C2410C;
+    --brand-tint: #FFF3E8;
+    --on-brand: #1B1410;      /* ink on the orange fill: 5.94:1 */
+    --on-deep: #FFFFFF;       /* white on the deep orange: 5.18:1 */
+    --brand-text: #C2410C;    /* orange text on light surfaces */
+
+    /* Surfaces */
+    --desk: #FBF7F2;
+    --surface: #FFFFFF;
+    --raised: #FFFFFF;
+    --sunken: #F6EFE7;
+    --overlay: rgb(27 20 16 / 0.5);
+
+    /* Text */
+    --ink: #1B1410;
+    --text: #1B1410;
+    --muted: #6B5B50;
+    --on-surface-inverse: #FFFFFF;
+
+    /* Rules and borders */
+    --hairline: #F0E2D6;        /* decorative only */
+    --border-strong: #8A786B;   /* controls: >= 3:1 on surface */
+    --rule: var(--hairline);
+    --rule-strong: var(--ink);
+
+    /* Feedback */
+    --danger: #B42318;
+    --danger-tint: #FEECEA;
+    --success: #166534;
+    --success-tint: #DCFCE7;
+    --info: #1D4ED8;
+    --info-tint: #DBEAFE;
+    --warning: #92400E;
+    --warning-tint: #FEF3C7;
+
+    /* Status badges: text + soft tint */
+    --st-paid: #166534;      --st-paid-bg: #DCFCE7;
+    --st-pending: #92400E;   --st-pending-bg: #FEF3C7;
+    --st-overdue: #B91C1C;   --st-overdue-bg: #FEE2E2;
+    --st-partial: #1D4ED8;   --st-partial-bg: #DBEAFE;
+    --st-draft: #44403C;     --st-draft-bg: #E7E5E4;
+    --st-cancelled: #86198F; --st-cancelled-bg: #FAE8FF;
+
+    /* Chart series */
+    --chart-1: #F26A1B;
+    --chart-2: #1D4ED8;
+    --chart-3: #166534;
+    --chart-4: #86198F;
+    --chart-5: #92400E;
+    --chart-grid: #F0E2D6;
+
+    /* Elevation (warm, layered) */
+    --elev-1: 0 1px 2px rgb(60 30 10 / 0.06);
+    --elev-2: 0 4px 12px rgb(60 30 10 / 0.08);
+    --elev-3: 0 12px 32px rgb(60 30 10 / 0.12);
+    --elev-4: 0 24px 64px rgb(60 30 10 / 0.18);
+    --glow: 0 0 0 0 transparent;
+    --inset-edge: inset 0 0 0 0 transparent;
+
+    /* Spacing (4px base) */
+    --space-1: 4px;  --space-2: 8px;  --space-3: 12px; --space-4: 16px;
+    --space-5: 20px; --space-6: 24px; --space-8: 32px; --space-10: 40px;
+    --space-12: 48px; --space-16: 64px; --space-20: 80px; --space-24: 96px;
+    --gutter: 16px;
+    --content-max: 1280px;
+    --reading-max: 68ch;
+
+    /* Radius */
+    --r-sm: 6px;
+    --r-md: 10px;
+    --r-lg: 14px;
+    --r-xl: 20px;
+    --r-full: 9999px;
+
+    /* Type scale (Major Third, 1.25) */
+    --text-xs: 12px; --text-sm: 14px; --text-base: 16px; --text-lg: 20px;
+    --text-xl: 25px; --text-2xl: 31px; --text-3xl: 39px; --text-4xl: 49px;
+    --fluid-display: clamp(2.25rem, 1.5rem + 3.2vw, 3.0625rem);
+    --fluid-h1: clamp(1.75rem, 1.35rem + 1.6vw, 2.4375rem);
+    --fluid-h2: clamp(1.375rem, 1.15rem + 1vw, 1.9375rem);
+    --ff-heading: 'Bricolage Grotesque Variable', 'Bricolage Grotesque', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    --ff-body: 'Figtree Variable', 'Figtree', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    --ff-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
+    --body-app: 15px;
+    --body-marketing: 17px;
+
+    /* Control sizes */
+    --control-sm: 32px; --control-md: 40px; --control-lg: 48px; --input-h: 44px;
+    --touch-target: 44px;
+    --row-h: 52px;
+    --pad-card: 24px;
+    --gap-section: 32px;
+
+    /* Layout */
+    --sidebar-w: 264px;
+    --sidebar-w-collapsed: 72px;
+    --topbar-h: 64px;
+    --bottom-nav-h: 64px;
+    --sheet-w: 820px;
+
+    /* Motion */
+    --dur-hover: 120ms;
+    --dur-open: 200ms;
+    --dur-page: 320ms;
+    --dur-data: 700ms;
+    --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+
+    /* z-index */
+    --z-base: 0;
+    --z-sticky: 10;
+    --z-dropdown: 30;
+    --z-drawer: 40;
+    --z-modal: 50;
+    --z-toast: 60;
+
+    /* Focus */
+    --focus: #C2410C;          /* 5.2:1 on the page background; the lighter brand orange is only 2.9:1 */
+    --focus-width: 2px;
+    --focus-offset: 2px;
+
+    /* Perforation hole size, paper fold */
+    --hole: 6px;
+    --fold: 20px;
+  }
+
+  :root[data-density='compact'] {
+    --row-h: 44px;
+    --pad-card: 16px;
+    --gap-section: 24px;
+  }
+
+  :root[data-theme='dark'] {
+    --brand: #FF8A3D;
+    --brand-deep: #FF8A3D;
+    --brand-tint: #2A1A0F;
+    --on-brand: #1B1410;
+    --on-deep: #1B1410;
+    --brand-text: #FFB27A;
+    --focus: #FF8A3D;
+
+    --desk: #0F0E0D;
+    --surface: #181614;
+    --raised: #221F1C;
+    --sunken: #131110;
+    --overlay: rgb(0 0 0 / 0.65);
+
+    --ink: #F5EFE9;
+    --text: #F5EFE9;
+    --muted: #A99D93;
+    --on-surface-inverse: #0F0E0D;
+
+    --hairline: #2B2723;
+    --border-strong: #7C7066;
+    --rule: var(--hairline);
+    --rule-strong: #F5EFE9;
+
+    --danger: #FF9B8F;
+    --danger-tint: #3A1814;
+    --success: #86EFAC;
+    --success-tint: #14301F;
+    --info: #93C5FD;
+    --info-tint: #14264A;
+    --warning: #FCD34D;
+    --warning-tint: #3A2A0A;
+
+    --st-paid: #86EFAC;      --st-paid-bg: #14301F;
+    --st-pending: #FCD34D;   --st-pending-bg: #3A2A0A;
+    --st-overdue: #FCA5A5;   --st-overdue-bg: #3F1414;
+    --st-partial: #93C5FD;   --st-partial-bg: #14264A;
+    --st-draft: #D6D3D1;     --st-draft-bg: #2B2926;
+    --st-cancelled: #F0ABFC; --st-cancelled-bg: #3A1440;
+
+    --chart-1: #FF8A3D;
+    --chart-2: #93C5FD;
+    --chart-3: #86EFAC;
+    --chart-4: #F0ABFC;
+    --chart-5: #FCD34D;
+    --chart-grid: #2B2723;
+
+    --elev-1: 0 1px 2px rgb(0 0 0 / 0.4);
+    --elev-2: 0 4px 12px rgb(0 0 0 / 0.45);
+    --elev-3: 0 12px 32px rgb(0 0 0 / 0.5);
+    --elev-4: 0 24px 64px rgb(0 0 0 / 0.6);
+    --glow: 0 0 24px rgb(255 138 61 / 0.22);
+    --inset-edge: inset 0 1px 0 rgb(255 255 255 / 0.04);
+  }
+
+  @media (min-width: 640px) { :root { --gutter: 24px; } }
+  @media (min-width: 1024px) { :root { --gutter: 32px; } }
+
+  @media (prefers-contrast: more) {
+    :root { --hairline: var(--border-strong); --muted: color-mix(in srgb, var(--text) 82%, var(--surface)); }
+  }
+}
+
+/* Expose tokens to Tailwind utilities. "inline" keeps the var() so theme switches apply live. */
+@theme inline {
+  --color-brand: var(--brand);
+  --color-brand-deep: var(--brand-deep);
+  --color-brand-tint: var(--brand-tint);
+  --color-brand-text: var(--brand-text);
+  --color-on-brand: var(--on-brand);
+  --color-desk: var(--desk);
+  --color-surface: var(--surface);
+  --color-raised: var(--raised);
+  --color-sunken: var(--sunken);
+  --color-ink: var(--ink);
+  --color-text: var(--text);
+  --color-muted: var(--muted);
+  --color-hairline: var(--hairline);
+  --color-strong: var(--border-strong);
+  --color-danger: var(--danger);
+  --color-danger-tint: var(--danger-tint);
+  --color-success: var(--success);
+  --color-success-tint: var(--success-tint);
+  --color-info: var(--info);
+  --color-info-tint: var(--info-tint);
+  --color-warning: var(--warning);
+  --color-warning-tint: var(--warning-tint);
+  --font-heading: var(--ff-heading);
+  --font-sans: var(--ff-body);
+  --font-mono: var(--ff-mono);
+  --radius-sm: var(--r-sm);
+  --radius-md: var(--r-md);
+  --radius-lg: var(--r-lg);
+  --radius-xl: var(--r-xl);
+  --shadow-e1: var(--elev-1);
+  --shadow-e2: var(--elev-2);
+  --shadow-e3: var(--elev-3);
+  --shadow-e4: var(--elev-4);
+  --ease-out: var(--ease);
+  --breakpoint-xs: 30rem;
+}
