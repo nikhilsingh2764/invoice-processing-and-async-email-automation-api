@@ -42,7 +42,10 @@ export function createClient({ baseURL = API_BASE_URL, csrf = SEND_CSRF_HEADER, 
 
   instance.interceptors.request.use((config) => {
     const method = String(config.method || 'get').toLowerCase()
-    if (csrf && method !== 'get' && method !== 'head' && method !== 'options') config.headers.set('X-Requested-With', 'InvoicePilot')
+    // Fixed: Set X-Requested-With to 'XMLHttpRequest' to satisfy backend security guard
+    if (csrf && method !== 'get' && method !== 'head' && method !== 'options') {
+      config.headers.set('X-Requested-With', 'XMLHttpRequest')
+    }
     return config
   })
 
