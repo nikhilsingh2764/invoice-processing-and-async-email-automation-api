@@ -32,6 +32,15 @@ class InvoiceRepository {
     async deleteById(userId, invoiceId, session = null) {
         return await Invoice.findOneAndDelete({ _id: invoiceId, userId }, { session });
     }
+
+    async findInvoicesNeedingOverdueStatus(session = null) {
+        return await Invoice.find({
+            dueDate: { $lt: new Date() },
+            status: { $nin: ['PAID', 'OVERDUE'] }
+        }).session(session);
+    }
+
+    
 }
 
 export default new InvoiceRepository();
