@@ -39,8 +39,6 @@ class InvoiceRepository {
             status: { $nin: ['PAID', 'OVERDUE'] }
         }).session(session);
     }
-
-    
 }
 
 export default new InvoiceRepository();
