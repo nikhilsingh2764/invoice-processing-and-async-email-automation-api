@@ -1,7 +1,6 @@
 import "./config/sentry.js";
 
 import express from "express";
-import mongoSanitize from "express-mongo-sanitize";
 import helmet from "helmet";
 import cors from "cors";
 import cookieParser from "cookie-parser";
@@ -45,7 +44,6 @@ app.use(
 
 app.use(express.json({ limit: "1mb" }));
 
-app.use(mongoSanitize());
 
 app.use(middleware.handle(i18next));
 
