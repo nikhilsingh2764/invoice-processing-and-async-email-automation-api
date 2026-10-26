@@ -56,7 +56,7 @@
 
         "EMAIL_VERIFICATION_SUBJECT": "अपना ईमेल सत्यापित करें",
         "PASSWORD_RESET_SUBJECT": "अपना पासवर्ड रीसेट करें",
-        "ACCOUNT_LOCKED":"खाता अस्थायी रूप से लॉक कर दिया गया है"
+        "ACCOUNT_LOCKED": "खाता अस्थायी रूप से लॉक कर दिया गया है"
     },
 
     "PROFILE": {

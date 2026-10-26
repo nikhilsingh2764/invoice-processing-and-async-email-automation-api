@@ -10,8 +10,7 @@ const escapeRegExp = (string) => {
 };
 
 class DashboardRepository {
-
-
+    // Dashboard Statistics (Combined into a single $facet aggregation pipeline for invoices)
     async getDashboardStats(userId) {
         const objectUserId = new mongoose.Types.ObjectId(userId);
         const now = new Date();
@@ -185,11 +184,10 @@ class DashboardRepository {
         };
     }
 
-
+    // Revenue Chart Analytics Aggregation
     async getRevenueChart(userId) {
         const objectUserId = new mongoose.Types.ObjectId(userId);
 
-        // Group revenue by creation date or month for analytics charts
         const revenueData = await Invoice.aggregate([
             {
                 $match: {
@@ -199,25 +197,95 @@ class DashboardRepository {
             {
                 $group: {
                     _id: {
-                        $dateToString: { format: "%Y-%m-%d", date: "$createdAt" }
+                        $dateToString: { format: "%Y-%m-%d", date: "$createdAt" },
                     },
                     revenue: { $sum: "$amountPaid" },
-                    count: { $sum: 1 }
-                }
+                    count: { $sum: 1 },
+                },
             },
             {
-                $sort: { _id: 1 }
+                $sort: { _id: 1 },
             },
             {
-                $limit: 30 // Last 30 days or periods matching chart requirements
-            }
+                $limit: 30,
+            },
         ]);
 
         return revenueData;
     }
 
+    // Invoice Status Breakdown for Charts
+    async getInvoiceStatusChart(userId) {
+        const objectUserId = new mongoose.Types.ObjectId(userId);
 
+        const statusData = await Invoice.aggregate([
+            { $match: { userId: objectUserId } },
+            {
+                $group: {
+                    _id: "$status",
+                    count: { $sum: 1 },
+                    totalAmount: { $sum: "$grandTotal" },
+                },
+            },
+        ]);
 
+        return statusData;
+    }
+
+    // Top Customers Analytics
+    async getTopCustomers(userId) {
+        const objectUserId = new mongoose.Types.ObjectId(userId);
+
+        const topCustomers = await Invoice.aggregate([
+            { $match: { userId: objectUserId } },
+            {
+                $group: {
+                    _id: "$customerId",
+                    customerName: { $first: "$customer.customerName" },
+                    totalInvoices: { $sum: 1 },
+                    totalSpent: { $sum: "$grandTotal" },
+                },
+            },
+            { $sort: { totalSpent: -1 } },
+            { $limit: 5 },
+        ]);
+
+        return topCustomers;
+    }
+
+    // Top Products Analytics
+    async getTopProducts(userId) {
+        const objectUserId = new mongoose.Types.ObjectId(userId);
+
+        const topProducts = await Invoice.aggregate([
+            { $match: { userId: objectUserId } },
+            { $unwind: "$items" },
+            {
+                $group: {
+                    _id: "$items.productId",
+                    productName: { $first: "$items.name" },
+                    totalSold: { $sum: "$items.quantity" },
+                    totalRevenue: { $sum: "$items.total" },
+                },
+            },
+            { $sort: { totalSold: -1 } },
+            { $limit: 5 },
+        ]);
+
+        return topProducts;
+    }
+
+    // Recent Invoices List
+    async getRecentInvoices(userId) {
+        const objectUserId = new mongoose.Types.ObjectId(userId);
+
+        const recentInvoices = await Invoice.find({ userId: objectUserId })
+            .sort({ createdAt: -1 })
+            .limit(5)
+            .lean();
+
+        return recentInvoices;
+    }
 }
 
 export default new DashboardRepository();

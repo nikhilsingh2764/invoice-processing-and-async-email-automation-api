@@ -56,7 +56,7 @@
 
         "EMAIL_VERIFICATION_SUBJECT": "Verify Your Email",
         "PASSWORD_RESET_SUBJECT": "Reset Your Password",
-        "ACCOUNT_LOCKED":"Account temporarily locked"
+        "ACCOUNT_LOCKED": "Account temporarily locked"
     },
 
     "PROFILE": {
