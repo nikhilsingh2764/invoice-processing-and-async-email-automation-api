@@ -44,7 +44,6 @@ app.use(
 
 app.use(express.json({ limit: "1mb" }));
 
-
 app.use(middleware.handle(i18next));
 
 app.use(cookieParser());

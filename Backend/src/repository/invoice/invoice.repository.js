@@ -36,7 +36,7 @@ class InvoiceRepository {
     async findInvoicesNeedingOverdueStatus(session = null) {
         return await Invoice.find({
             dueDate: { $lt: new Date() },
-            status: { $nin: ['PAID', 'OVERDUE'] }
+            status: { $nin: ["PAID", "OVERDUE"] },
         }).session(session);
     }
 }

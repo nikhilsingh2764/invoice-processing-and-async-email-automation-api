@@ -10,7 +10,8 @@ const escapeRegExp = (string) => {
 };
 
 class DashboardRepository {
-    // Dashboard Statistics (Combined into a single $facet aggregation pipeline for invoices)
+
+
     async getDashboardStats(userId) {
         const objectUserId = new mongoose.Types.ObjectId(userId);
         const now = new Date();
@@ -183,6 +184,40 @@ class DashboardRepository {
             },
         };
     }
+
+
+    async getRevenueChart(userId) {
+        const objectUserId = new mongoose.Types.ObjectId(userId);
+
+        // Group revenue by creation date or month for analytics charts
+        const revenueData = await Invoice.aggregate([
+            {
+                $match: {
+                    userId: objectUserId,
+                },
+            },
+            {
+                $group: {
+                    _id: {
+                        $dateToString: { format: "%Y-%m-%d", date: "$createdAt" }
+                    },
+                    revenue: { $sum: "$amountPaid" },
+                    count: { $sum: 1 }
+                }
+            },
+            {
+                $sort: { _id: 1 }
+            },
+            {
+                $limit: 30 // Last 30 days or periods matching chart requirements
+            }
+        ]);
+
+        return revenueData;
+    }
+
+
+
 }
 
 export default new DashboardRepository();
