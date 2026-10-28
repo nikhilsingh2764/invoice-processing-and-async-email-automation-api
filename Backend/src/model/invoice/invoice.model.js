@@ -39,7 +39,7 @@ const invoiceItemSchema = new mongoose.Schema(
         quantity: {
             type: Number,
             required: true,
-            min: 1,
+            min: 0.01, // matches the request validator (decimal quantities such as 0.5 kg)
         },
 
         taxRate: {
@@ -71,6 +71,14 @@ const invoiceSchema = new mongoose.Schema(
             type: mongoose.Schema.Types.ObjectId,
             ref: "User",
             required: true,
+            index: true,
+        },
+
+        // Reference to the customer the invoice was issued to (used for filters and analytics).
+        // The full customer data is still stored as a snapshot in `customer`.
+        customerId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Customer",
             index: true,
         },
 
@@ -231,6 +239,7 @@ const invoiceSchema = new mongoose.Schema(
         amountPaid: {
             type: Number,
             default: 0,
+            min: 0,
         },
 
         status: {

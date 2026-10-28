@@ -6,7 +6,7 @@ const resetPasswordTemplate = (otp) => {
 
         <h1>${otp}</h1>
 
-        <p>This OTP is valid for 10 minutes.</p>
+        <p>This OTP is valid for 5 minutes.</p>
 
         <p>If you didn't request a password reset, please ignore this email.</p>
     `;

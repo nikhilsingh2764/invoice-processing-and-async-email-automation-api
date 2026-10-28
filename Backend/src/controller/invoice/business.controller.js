@@ -36,13 +36,7 @@ export const getBusinessProfile = TryCatch(async (req, res) => {
 export const updateBusiness = TryCatch(async (req, res) => {
     const userId = req.user._id;
 
-    const newBusinessData = req.body;
-
-    const updatedBusiness = await updateBusinessProfileService({
-        newBusinessData,
-        userId,
-        language: req.language,
-    });
+    const updatedBusiness = await updateBusinessProfileService(userId, req.body, req.language);
 
     return res
         .status(200)

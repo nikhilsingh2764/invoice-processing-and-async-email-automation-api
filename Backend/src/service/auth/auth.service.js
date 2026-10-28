@@ -8,13 +8,14 @@ import refreshTokenRepository from "../../repository/auth/refreshToken.repositor
 import { emailQueue } from "../../queues/email.queue.js";
 import sendOTPService from "./otp.service.js";
 
-import generateToken from "../../utils/generateToken.js";
+import { issueTokenPair } from "../../utils/tokens.js";
 
 import welcomeTemplate from "../../templates/welcome.template.js";
 
 import translate from "../../utils/translate.js";
 import logger from "../../utils/logger.js";
 import hashToken from "../../utils/hashToken.js";
+import { invalidateDashboardCache } from "../dashboard/dashboard.service.js";
 
 import Business from "../../model/invoice/Business.model.js";
 import Customer from "../../model/invoice/customer.model.js";
@@ -24,6 +25,20 @@ import Invoice from "../../model/invoice/invoice.model.js";
 import mongoose from "mongoose";
 
 const SALT_ROUNDS = 10;
+
+// Valid bcrypt hash (of a random string) used to keep login timing identical for unknown emails
+const DUMMY_HASH = bcrypt.hashSync("dummy-password-for-timing-protection", SALT_ROUNDS);
+
+const MAX_FAILED_LOGINS = 5;
+const LOCK_DURATION_MS = 15 * 60 * 1000;
+
+// Public shape of a user (never expose password hash, lock counters, googleId...)
+const toPublicUser = (user) => ({
+    id: user._id,
+    username: user.username,
+    email: user.email,
+    isVerified: user.isVerified,
+});
 
 // =========================
 // SIGNUP
@@ -64,6 +79,7 @@ export const SignupService = async (userdata, language = "en") => {
         email,
         password,
         type: "EMAIL_VERIFICATION",
+        language,
     });
 
     logger.info(`Signup OTP generated and email queued for: ${email}`);
@@ -157,7 +173,7 @@ export const VerifyOTPService = async ({ email, otp }, language = "en") => {
         logger.error(`Failed to queue welcome email for user ${user._id}: ${err.message}`);
     }
 
-    return user;
+    return toPublicUser(user);
 };
 
 // =========================
@@ -170,13 +186,11 @@ export const LoginService = async (userdata, language = "en") => {
 
     const user = await userRepository.findByEmail(email);
 
-    // 1. Mitigate timing attacks: Always execute bcrypt.compare even if user doesn't exist
-    const dummyHash = "$2b$10$abcdefghijklmnopqrstuABCDEFGHIJKLMNOPQRSTUVWXYZ0123456";
-    const passwordHashToCompare = user ? user.password : dummyHash;
-    const isPasswordMatch = await bcrypt.compare(password, passwordHashToCompare);
+    // 1. Mitigate timing attacks: always run bcrypt.compare, even if the user does not exist
+    //    or has no password (Google accounts).
+    const isPasswordMatch = await bcrypt.compare(String(password), user?.password || DUMMY_HASH);
 
-    // 2. Prevent account enumeration: Use generic unified checks where possible,
-    // or perform all validation silently without giving away distinct state clues.
+    // 2. Prevent account enumeration: unknown email and wrong password give the same answer.
     if (!user) {
         logger.warn(`Login failed - user not found: ${email}`);
         throw new ApiError(400, translate("AUTH.INVALID_PASSWORD", language));
@@ -186,21 +200,13 @@ export const LoginService = async (userdata, language = "en") => {
         throw new ApiError(400, "Google accounts cannot use password authentication");
     }
 
-    if (!user.isVerified || !isPasswordMatch) {
-        logger.warn(`Login failed - unverified account or incorrect password: ${email}`);
-        throw new ApiError(400, translate("AUTH.INVALID_PASSWORD", language));
-    }
-
-    if (!user.isActive) {
-        logger.warn(`Login attempted with inactive account: ${user._id}`);
-        throw new ApiError(400, translate("AUTH.ACCOUNT_INACTIVE", language));
-    }
-
+    // 3. Account lock check BEFORE evaluating the password result
     if (user.lockUntil && user.lockUntil > new Date()) {
         logger.warn(`Account temporarily locked: ${email}`);
         throw new ApiError(429, translate("AUTH.ACCOUNT_LOCKED", language));
     }
 
+    // Lock expired: start counting from zero again
     if (user.lockUntil && user.lockUntil <= new Date()) {
         await userRepository.updateProfile(user._id, {
             failedLoginAttempts: 0,
@@ -211,23 +217,24 @@ export const LoginService = async (userdata, language = "en") => {
         user.lockUntil = null;
     }
 
+    // 4. Wrong password: count the failure atomically and lock the account after too many
     if (!user.isVerified || !isPasswordMatch) {
         logger.warn(`Login failed - unverified account or incorrect password: ${email}`);
 
-        // 2. ATOMIC UPDATE: Increment failed attempts and lock account atomically
-        // to prevent read-modify-write race conditions and denial-of-service vectors.
-        const currentAttempts = (user.failedLoginAttempts || 0) + 1;
-        const updateData = {
-            failedLoginAttempts: currentAttempts,
-        };
+        const updated = await userRepository.incrementFailedLoginAttempts(user._id);
 
-        if (currentAttempts >= 5) {
-            updateData.lockUntil = new Date(Date.now() + 15 * 60 * 1000);
+        if (updated && updated.failedLoginAttempts >= MAX_FAILED_LOGINS) {
+            await userRepository.updateProfile(user._id, {
+                lockUntil: new Date(Date.now() + LOCK_DURATION_MS),
+            });
         }
 
-        await userRepository.updateProfile(user._id, updateData);
-
         throw new ApiError(400, translate("AUTH.INVALID_PASSWORD", language));
+    }
+
+    if (!user.isActive) {
+        logger.warn(`Login attempted with inactive account: ${user._id}`);
+        throw new ApiError(400, translate("AUTH.ACCOUNT_INACTIVE", language));
     }
 
     if (user.failedLoginAttempts > 0 || user.lockUntil) {
@@ -237,22 +244,13 @@ export const LoginService = async (userdata, language = "en") => {
         });
     }
 
-    const accessToken = generateToken(
-        { id: user._id, email: user.email },
-        process.env.ACCESS_TOKEN_SECRET,
-        process.env.ACCESS_TOKEN_EXPIRES_IN
-    );
-
-    const refreshToken = generateToken(
-        { id: user._id },
-        process.env.REFRESH_TOKEN_SECRET,
-        process.env.REFRESH_TOKEN_EXPIRES_IN
-    );
+    const { accessToken, refreshToken, refreshTokenHash, refreshTokenExpiresAt } =
+        issueTokenPair(user);
 
     await refreshTokenRepository.create({
         userId: user._id,
-        tokenHash: hashToken(refreshToken),
-        expiresAt: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000),
+        tokenHash: refreshTokenHash,
+        expiresAt: refreshTokenExpiresAt,
     });
 
     logger.info(`User logged in successfully: ${user._id}`);
@@ -313,7 +311,7 @@ export const ProfileService = async (userId, language = "en") => {
 
 export const LogoutService = async (refreshToken, language = "en") => {
     if (refreshToken) {
-        await refreshTokenRepository.deleteByToken(refreshToken);
+        await refreshTokenRepository.revokeTokenByHash(hashToken(refreshToken));
     }
 
     logger.info(`User logged out successfully`);
@@ -580,8 +578,8 @@ export const DeleteAccountService = async (id, password, language = "en") => {
 
     try {
         // Perform all deletions within the session
-        await userRepository.findByIdAndDelete(id, { session });
-        await refreshTokenRepository.deleteByUserId(id, { session });
+        await userRepository.findByIdAndDelete(id, session);
+        await refreshTokenRepository.deleteByUserId(id, session);
 
         await Business.deleteMany({ $or: [{ userId: id }, { user: id }] }).session(session);
         await Customer.deleteMany({ $or: [{ userId: id }, { user: id }] }).session(session);
@@ -590,17 +588,19 @@ export const DeleteAccountService = async (id, password, language = "en") => {
 
         // Commit transaction if everything succeeds
         await session.commitTransaction();
-        session.endSession();
     } catch (error) {
         // Abort transaction and rollback if anything fails
         await session.abortTransaction();
-        session.endSession();
 
         logger.error(`Account deletion failed for user ${id}: ${error.message}`);
         throw new ApiError(500, translate("COMMON.INTERNAL_ERROR", language));
+    } finally {
+        await session.endSession();
     }
 
     await redis.del(`profile:${id}`);
+    await invalidateDashboardCache(id);
+    await redis.del(`business:${id}`);
 
     logger.info(`Account deleted successfully: ${id}`);
 

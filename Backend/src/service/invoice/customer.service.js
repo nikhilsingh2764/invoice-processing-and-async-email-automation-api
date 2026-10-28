@@ -2,20 +2,37 @@ import ApiError from "../../utils/ApiError.js";
 import customerRepository from "../../repository/invoice/customer.repository.js";
 import logger from "../../utils/logger.js";
 import translate from "../../utils/translate.js";
+import { escapeRegExp } from "../../utils/escapeRegExp.js";
+import { invalidateDashboardCache } from "../dashboard/dashboard.service.js";
 
-// Helper to escape special regex characters and prevent ReDoS / injection
-const escapeRegExp = (string) => {
-    return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-};
+const CREATE_FIELDS = [
+    "customerName",
+    "email",
+    "phone",
+    "companyName",
+    "gstNumber",
+    "customerType",
+    "notes",
+    "billingAddress",
+    "shippingAddress",
+];
 
 export const createCustomerService = async (userData, language = "en") => {
-    const customer = await customerRepository.create(userData);
+    // Whitelist fields: the client must not be able to set _id, createdAt, userId...
+    const data = { userId: userData.userId };
+    for (const key of CREATE_FIELDS) {
+        if (userData[key] !== undefined) data[key] = userData[key];
+    }
+
+    const customer = await customerRepository.create(data);
 
     if (!customer) {
         logger.error(`Customer creation failed: ${userData.userId}`);
 
         throw new ApiError(500, translate("CUSTOMER.CUSTOMER_CREATE_FAILED", language));
     }
+
+    await invalidateDashboardCache(userData.userId);
 
     logger.info(`Customer created successfully: ${customer._id}`);
 
@@ -134,6 +151,8 @@ export const deleteCustomerService = async (customerId, userId, language = "en")
     }
 
     await customerRepository.deleteByIdAndUserId(customerId, userId);
+
+    await invalidateDashboardCache(userId);
 
     logger.info(`Customer deleted successfully: ${customerId}`);
 

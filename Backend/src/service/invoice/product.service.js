@@ -2,15 +2,35 @@ import ApiError from "../../utils/ApiError.js";
 import productRepository from "../../repository/invoice/product.repository.js";
 import logger from "../../utils/logger.js";
 import translate from "../../utils/translate.js";
+import { escapeRegExp } from "../../utils/escapeRegExp.js";
+import { invalidateDashboardCache } from "../dashboard/dashboard.service.js";
+
+const CREATE_FIELDS = [
+    "productName",
+    "description",
+    "category",
+    "unit",
+    "price",
+    "taxRate",
+    "discount",
+];
 
 export const createProductService = async (productData, language = "en") => {
-    const product = await productRepository.create(productData);
+    // Whitelist fields: the client must not be able to set _id, createdAt, userId...
+    const data = { userId: productData.userId };
+    for (const key of CREATE_FIELDS) {
+        if (productData[key] !== undefined) data[key] = productData[key];
+    }
+
+    const product = await productRepository.create(data);
 
     if (!product) {
         logger.error(`Product creation failed: ${productData.userId}`);
 
         throw new ApiError(500, translate("PRODUCT.PRODUCT_CREATE_FAILED", language));
     }
+
+    await invalidateDashboardCache(productData.userId);
 
     logger.info(`Product created successfully: ${product._id}`);
 
@@ -27,10 +47,17 @@ export const getAllProductsService = async (userId, queryFilters = {}, language 
     const query = { userId };
 
     // 3. Add search filter (supports product name or description)
-    if (queryFilters.search) {
+    // The search text is escaped: it is user input and must not act as a regex / operator.
+    let search = queryFilters.search;
+    if (Array.isArray(search)) {
+        search = search[search.length - 1];
+    }
+
+    if (search && typeof search === "string" && search.trim()) {
+        const sanitizedSearch = escapeRegExp(search.trim());
         query.$or = [
-            { productName: { $regex: queryFilters.search, $options: "i" } },
-            { description: { $regex: queryFilters.search, $options: "i" } },
+            { productName: { $regex: sanitizedSearch, $options: "i" } },
+            { description: { $regex: sanitizedSearch, $options: "i" } },
         ];
     }
 
@@ -70,7 +97,15 @@ export const getProductByIdService = async (productId, userId, language = "en") 
 };
 
 export const updateProductService = async (productId, userId, rawUpdateData, language = "en") => {
-    const allowedUpdates = ["name", "description", "price", "category", "unit", "taxRate"];
+    const allowedUpdates = [
+        "productName",
+        "description",
+        "price",
+        "category",
+        "unit",
+        "taxRate",
+        "discount",
+    ];
 
     const updateData = {};
     for (const key of allowedUpdates) {
@@ -111,6 +146,8 @@ export const deleteProductService = async (productId, userId, language = "en") =
     }
 
     await productRepository.deleteByIdAndUserId(productId, userId);
+
+    await invalidateDashboardCache(userId);
 
     logger.info(`Product deleted successfully: ${productId}`);
 

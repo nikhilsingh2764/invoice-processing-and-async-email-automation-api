@@ -15,14 +15,16 @@ import { invoiceEmailQueue } from "../../queues/invoiceEmail.queue.js";
 import logger from "../../utils/logger.js";
 import translate from "../../utils/translate.js";
 
-import { encryptBuffer, decryptBuffer } from "../../utils/encryption.js";
+import { decryptBuffer } from "../../utils/encryption.js";
+import { PAYMENT_STATUS } from "../../utils/invoice.constant.js";
+import { invalidateDashboardCache } from "../dashboard/dashboard.service.js";
 
 // Create Invoice
 export const createInvoiceService = async (userData, language = "en") => {
     const session = await mongoose.startSession();
 
     try {
-        return await session.withTransaction(async () => {
+        const createdInvoice = await session.withTransaction(async () => {
             const { userId, customerId, items, dueDate, paymentMethod, notes, status } = userData;
 
             // Increment invoice number with session
@@ -55,6 +57,7 @@ export const createInvoiceService = async (userData, language = "en") => {
             const invoice = await invoiceRepository.create(
                 {
                     userId,
+                    customerId: customer._id,
                     business: {
                         businessName: business.businessName,
                         ownerName: business.ownerName,
@@ -88,6 +91,8 @@ export const createInvoiceService = async (userData, language = "en") => {
                     notes,
                     termsAndConditions: business.termsAndConditions,
                     status,
+                    // A invoice created as Paid is fully paid (keeps revenue and PDF balance correct)
+                    amountPaid: status === PAYMENT_STATUS.PAID ? grandTotal : 0,
                 },
                 session
             );
@@ -95,6 +100,10 @@ export const createInvoiceService = async (userData, language = "en") => {
             logger.info(`Invoice created successfully: ${invoice._id}`);
             return invoice;
         });
+
+        await invalidateDashboardCache(userData.userId);
+
+        return createdInvoice;
     } catch (error) {
         logger.error(`Invoice creation failed: ${error.message}`);
         throw error;
@@ -148,6 +157,7 @@ export const updateInvoiceService = async (userId, invoiceId, rawUpdatedData, la
                 "notes",
                 "status",
                 "customerId",
+                "termsAndConditions",
             ];
 
             const updatedData = {};
@@ -176,6 +186,17 @@ export const updateInvoiceService = async (userId, invoiceId, rawUpdatedData, la
                 updatedData.grandTotal = grandTotal;
             }
 
+            // Keep the payment amount consistent with the status
+            const nextGrandTotal = updatedData.grandTotal ?? invoice.grandTotal;
+            const nextStatus = updatedData.status ?? invoice.status;
+
+            if (nextStatus === PAYMENT_STATUS.PAID) {
+                updatedData.amountPaid = nextGrandTotal;
+            } else if (invoice.status === PAYMENT_STATUS.PAID && updatedData.status) {
+                // Moving away from Paid: the invoice is no longer fully paid
+                updatedData.amountPaid = 0;
+            }
+
             // Update customer snapshot if customerId changed
             if (updatedData.customerId) {
                 const customer = await customerRepository.findByIdAndUserId(
@@ -190,6 +211,7 @@ export const updateInvoiceService = async (userId, invoiceId, rawUpdatedData, la
                     throw new ApiError(404, translate("CUSTOMER.CUSTOMER_NOT_FOUND", language));
                 }
 
+                updatedData.customerId = customer._id;
                 updatedData.customer = {
                     customerName: customer.customerName,
                     email: customer.email,
@@ -201,8 +223,6 @@ export const updateInvoiceService = async (userId, invoiceId, rawUpdatedData, la
                     billingAddress: customer.billingAddress,
                     shippingAddress: customer.shippingAddress,
                 };
-
-                delete updatedData.customerId;
             }
 
             // Update MongoDB using session
@@ -223,7 +243,7 @@ export const updateInvoiceService = async (userId, invoiceId, rawUpdatedData, la
 
         // Invalidate caches after successful transaction commit
         await redis.del(`invoice:${invoiceId}:${userId}`);
-        await redis.del(`invoice:pdf:${userId}:${invoiceId}`);
+        await invalidateDashboardCache(userId);
 
         logger.info(`Invoice updated successfully: ${invoiceId}`);
         return updatedInvoice;
@@ -250,8 +270,7 @@ export const deleteInvoiceService = async (userId, invoiceId, language = "en") =
     // Invalidate invoice cache
     await redis.del(`invoice:${invoiceId}:${userId}`);
 
-    // Invalidate PDF cache
-    await redis.del(`invoice:pdf:${userId}:${invoiceId}`);
+    await invalidateDashboardCache(userId);
 
     logger.info(`Invoice deleted successfully: ${invoiceId}`);
 
@@ -355,7 +374,7 @@ export const duplicateInvoiceService = async (userId, invoiceId, language = "en"
     const session = await mongoose.startSession();
 
     try {
-        return await session.withTransaction(async () => {
+        const duplicated = await session.withTransaction(async () => {
             // Find original invoice with session
             const invoice = await invoiceRepository.findById(userId, invoiceId, session);
 
@@ -394,7 +413,7 @@ export const duplicateInvoiceService = async (userId, invoiceId, language = "en"
             );
 
             duplicateInvoice.sent = false;
-            duplicateInvoice.sentAt = null;
+            duplicateInvoice.amountPaid = 0; // a copy starts unpaid, whatever the original was
 
             // Create duplicated invoice using session
             const newInvoice = await invoiceRepository.create(duplicateInvoice, session);
@@ -407,6 +426,10 @@ export const duplicateInvoiceService = async (userId, invoiceId, language = "en"
             logger.info(`Invoice duplicated successfully: ${newInvoice._id}`);
             return newInvoice;
         });
+
+        await invalidateDashboardCache(userId);
+
+        return duplicated;
     } catch (error) {
         logger.error(`Invoice duplication failed: ${error.message}`);
         throw error;

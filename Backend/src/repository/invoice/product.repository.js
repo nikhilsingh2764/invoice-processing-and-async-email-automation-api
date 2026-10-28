@@ -3,7 +3,8 @@ import Product from "../../model/invoice/product.model.js";
 class ProductRepository {
     // Create Product
     async create(productData, session = null) {
-        return await Product.create([productData], { session });
+        const [product] = await Product.create([productData], { session });
+        return product;
     }
 
     // Get All Products (with support for query filters, skip, limit)
@@ -54,7 +55,7 @@ class ProductRepository {
             },
             updatedData,
             {
-                new: true,
+                returnDocument: "after",
                 runValidators: true,
                 session,
             }

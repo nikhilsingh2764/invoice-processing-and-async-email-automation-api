@@ -35,6 +35,23 @@ export const loginLimiter = rateLimit({
 });
 
 // ==============================
+// Google Login Limiter
+// 20 requests / 1 minute (IP)
+// ==============================
+
+export const googleLoginLimiter = rateLimit({
+    store: createStore("googleLogin:"),
+    windowMs: 1 * 60 * 1000,
+    max: 20,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: {
+        success: false,
+        message: "Too many login attempts. Try again after 1 minute.",
+    },
+});
+
+// ==============================
 // Signup Limiter
 // 3 requests / 1 hour
 // ==============================

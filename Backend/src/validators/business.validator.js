@@ -1,5 +1,15 @@
 import { body } from "express-validator";
 
+// Customer / business e-mails receive real invoices, so only lower-case them. The default
+// normalizeEmail() would strip dots and "+tags" and could change the delivery address.
+const EMAIL_OPTIONS = {
+    gmail_remove_dots: false,
+    gmail_remove_subaddress: false,
+    outlookdotcom_remove_subaddress: false,
+    yahoo_remove_subaddress: false,
+    icloud_remove_subaddress: false,
+};
+
 export const createBusinessValidator = [
     body("businessName")
         .trim()
@@ -19,7 +29,7 @@ export const createBusinessValidator = [
         .trim()
         .notEmpty()
         .withMessage("Email is required")
-        .normalizeEmail()
+        .normalizeEmail(EMAIL_OPTIONS)
         .isEmail()
         .withMessage("Please provide a valid email address."),
 
@@ -113,6 +123,12 @@ export const createBusinessValidator = [
 
     body("signature").optional({ checkFalsy: true }).trim(),
 
+    body("logo")
+        .optional({ checkFalsy: true })
+        .trim()
+        .isURL()
+        .withMessage("Logo must be a valid URL"),
+
     body("invoicePrefix")
         .optional()
         .trim()
@@ -147,7 +163,7 @@ export const updateBusinessValidator = [
     body("email")
         .optional()
         .trim()
-        .normalizeEmail()
+        .normalizeEmail(EMAIL_OPTIONS)
         .isEmail()
         .withMessage("Please provide a valid email address"),
 
@@ -210,7 +226,11 @@ export const updateBusinessValidator = [
 
     body("signature").optional().trim(),
 
-    body("logo").optional().trim(),
+    body("logo")
+        .optional({ checkFalsy: true })
+        .trim()
+        .isURL()
+        .withMessage("Logo must be a valid URL"),
 
     body("invoicePrefix")
         .optional()

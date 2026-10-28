@@ -12,7 +12,15 @@ class RefreshTokenRepository {
         });
     }
 
-    // Revoke or delete a specific token by its hash during rotation
+    // Atomically remove and return a token record. Only ONE concurrent caller gets the record,
+    // which makes refresh-token rotation race-free.
+    async consumeByTokenHash(tokenHash) {
+        return await RefreshToken.findOneAndDelete({
+            tokenHash,
+        });
+    }
+
+    // Delete a specific token by its hash (logout)
     async revokeTokenByHash(tokenHash) {
         return await RefreshToken.deleteOne({
             tokenHash,
@@ -24,10 +32,8 @@ class RefreshTokenRepository {
         return await RefreshToken.updateMany({ userId }, { $set: { isRevoked: true } });
     }
 
-    async deleteByUserId(userId) {
-        return await RefreshToken.deleteMany({
-            userId,
-        });
+    async deleteByUserId(userId, session = null) {
+        return await RefreshToken.deleteMany({ userId }).session(session);
     }
 }
 

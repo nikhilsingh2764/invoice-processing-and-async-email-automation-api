@@ -1,5 +1,8 @@
-import "dotenv/config";
+import "./config/env.js"; // loads .env and validates required variables (must stay the first import)
+
+import mongoose from "mongoose";
 import redis from "./config/redis.js";
+import { TRANSIENT_SOCKET_ERROR_CODES } from "./config/env.js";
 import { scheduleOverdueJob } from "./queues/overdue.queue.js";
 import overdueWorker from "./worker/overdue.worker.js";
 import emailWorker from "./worker/email.worker.js";
@@ -10,6 +13,12 @@ import connectDB from "./config/db.js";
 
 // Process-Level Error Handlers for Worker Process
 process.on("uncaughtException", (error) => {
+    // Redis/BullMQ socket drops are retried automatically; do not crash the worker for them.
+    if (TRANSIENT_SOCKET_ERROR_CODES.includes(error?.code)) {
+        logger.warn(`Ignored transient socket error: ${error.code}`);
+        return;
+    }
+
     logger.error({
         message: "Uncaught Exception in Worker process! Shutting down...",
         error: error.message,
@@ -18,7 +27,7 @@ process.on("uncaughtException", (error) => {
     process.exit(1);
 });
 
-process.on("unhandledRejection", (reason, promise) => {
+process.on("unhandledRejection", (reason) => {
     logger.error({
         message: "Unhandled Promise Rejection in Worker process! Shutting down...",
         reason: reason?.message || reason,
@@ -45,10 +54,11 @@ const startWorkers = async () => {
         const shutdownHandler = async (signal) => {
             logger.info(`Worker process received ${signal}. Shutting down workers gracefully...`);
             try {
-                // Close all workers cleanly
+                // Close all workers cleanly (waits for active jobs to finish)
                 await Promise.all(workers.map((worker) => worker.close()));
                 await redis.quit();
-                logger.info("Workers and Redis connection closed successfully.");
+                await mongoose.connection.close();
+                logger.info("Workers, Redis and MongoDB connections closed successfully.");
                 process.exit(0);
             } catch (err) {
                 logger.error(`Error during worker graceful shutdown: ${err.message}`);
@@ -59,7 +69,7 @@ const startWorkers = async () => {
         process.on("SIGTERM", () => shutdownHandler("SIGTERM"));
         process.on("SIGINT", () => shutdownHandler("SIGINT"));
     } catch (error) {
-        logger.error("Background workers failed to start:", error.message);
+        logger.error(`Background workers failed to start: ${error.message}`);
         process.exit(1);
     }
 };

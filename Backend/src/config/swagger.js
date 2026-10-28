@@ -1,4 +1,8 @@
 import swaggerJSDoc from "swagger-jsdoc";
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const options = {
     definition: {
@@ -12,7 +16,8 @@ const options = {
 
         servers: [
             {
-                url: "https://backend-api-lbvm.onrender.com/api/v1",
+                // Relative URL: Swagger UI calls the same host that serves the docs.
+                url: "/api/v1",
             },
         ],
 
@@ -35,7 +40,7 @@ const options = {
         },
     },
 
-    apis: ["./src/route/**/*.routes.js"],
+    apis: [path.join(__dirname, "../route/**/*.routes.js")],
 };
 
 const swaggerSpec = swaggerJSDoc(options);

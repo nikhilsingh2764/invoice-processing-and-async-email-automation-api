@@ -16,6 +16,23 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  # Background workers (emails, invoice PDFs, overdue job). Without this service OTP emails,
+  # invoice emails and PDF downloads are queued but never processed.
+  worker:
+    build: .
+    command: ["npm", "run", "worker"]
+    env_file:
+      - .env
+    environment:
+      REDIS_URL: redis://redis:6379
+      MONGODB_URI: mongodb://mongo:27017/invoice-db?replicaSet=rs0
+    depends_on:
+      redis:
+        condition: service_healthy
+      mongo:
+        condition: service_healthy
+    restart: unless-stopped
+
   redis:
     image: redis:7-alpine
     ports:
@@ -27,6 +44,8 @@ services:
       timeout: 5s
       retries: 5
 
+  # Single-node replica set: the API uses MongoDB transactions, which require a replica set.
+  # The healthcheck initiates the replica set the first time and then reports healthy.
   mongo:
     image: mongo:8
     ports:
@@ -36,13 +55,15 @@ services:
       - mongo-data:/data/db
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      test: >
+        mongosh --quiet --eval "try { rs.status().ok } catch (e) { rs.initiate({_id: 'rs0', members: [{_id: 0, host: 'mongo:27017'}]}).ok }"
       interval: 10s
-      timeout: 5s
-      retries: 5
+      timeout: 10s
+      retries: 10
+      start_period: 10s
 
   prometheus:
-    image: prom/prometheus:latest
+    image: prom/prometheus:v2.55.1
     ports:
       - "9090:9090"
     volumes:
@@ -50,10 +71,12 @@ services:
         source: ./prometheus/prometheus.yml
         target: /etc/prometheus/prometheus.yml
         read_only: true
+    depends_on:
+      - api
     restart: unless-stopped
 
   grafana:
-    image: grafana/grafana:latest
+    image: grafana/grafana:11.3.0
     ports:
       - "3000:3000"
     restart: unless-stopped

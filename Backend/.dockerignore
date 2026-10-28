@@ -2,6 +2,11 @@ node_modules
 npm-debug.log
 .git
 .gitignore
+.github
+.husky
 .env
+.env.*
+!.env.example
 logs
 coverage
+tests

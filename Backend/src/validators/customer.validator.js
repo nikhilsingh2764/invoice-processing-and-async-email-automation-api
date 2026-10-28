@@ -1,5 +1,15 @@
 import { body } from "express-validator";
 
+// Customer / business e-mails receive real invoices, so only lower-case them. The default
+// normalizeEmail() would strip dots and "+tags" and could change the delivery address.
+const EMAIL_OPTIONS = {
+    gmail_remove_dots: false,
+    gmail_remove_subaddress: false,
+    outlookdotcom_remove_subaddress: false,
+    yahoo_remove_subaddress: false,
+    icloud_remove_subaddress: false,
+};
+
 // ==============================
 // Create Customer Validator
 // ==============================
@@ -16,7 +26,7 @@ export const createCustomerValidator = [
         .trim()
         .notEmpty()
         .withMessage("Email is required")
-        .normalizeEmail()
+        .normalizeEmail(EMAIL_OPTIONS)
         .isEmail()
         .withMessage("Please provide a valid email address"),
 
@@ -121,7 +131,7 @@ export const updateCustomerValidator = [
     body("email")
         .optional()
         .trim()
-        .normalizeEmail()
+        .normalizeEmail(EMAIL_OPTIONS)
         .isEmail()
         .withMessage("Please provide a valid email address"),
 

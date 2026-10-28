@@ -9,13 +9,11 @@
         "INTERNAL_ERROR": "आंतरिक सर्वर त्रुटि",
         "DASHBOARD_FETCHED": "डैशबोर्ड सफलतापूर्वक प्राप्त किया गया"
     },
-
     "AUTH": {
         "USER_NOT_FOUND": "यूज़र नहीं मिला",
         "USER_ALREADY_EXISTS": "यूज़र पहले से मौजूद है",
         "EMAIL_ALREADY_EXISTS": "ईमेल पहले से मौजूद है",
         "USERNAME_ALREADY_EXISTS": "यूज़रनेम पहले से मौजूद है",
-
         "EMAIL_REQUIRED": "ईमेल आवश्यक है",
         "PASSWORD_REQUIRED": "पासवर्ड आवश्यक है",
         "INVALID_EMAIL": "अमान्य ईमेल पता",
@@ -25,46 +23,40 @@
         "RESET_PASSWORD_FIELDS_REQUIRED": "ईमेल, ओटीपी और नया पासवर्ड आवश्यक हैं",
         "PASSWORD_UPDATED": "पासवर्ड सफलतापूर्वक अपडेट किया गया",
         "OLD_PASSWORD_INCORRECT": "पुराना पासवर्ड गलत है",
-
         "SIGNUP_SUCCESS": "खाता सफलतापूर्वक बनाया गया",
         "LOGIN_SUCCESS": "लॉगिन सफल रहा",
         "GOOGLE_LOGIN_SUCCESS": "गूगल लॉगिन सफल रहा",
         "LOGOUT_SUCCESS": "लॉगआउट सफल रहा",
-
         "EMAIL_NOT_VERIFIED": "कृपया पहले अपना ईमेल सत्यापित करें",
         "EMAIL_VERIFIED": "ईमेल सफलतापूर्वक सत्यापित हो गया",
         "INVALID_OTP": "अमान्य ओटीपी",
         "OTP_EXPIRED": "ओटीपी की समय सीमा समाप्त हो गई है",
         "OTP_REQUIRED": "ओटीपी आवश्यक है",
         "OTP_SENT": "ओटीपी सफलतापूर्वक भेज दिया गया है",
-
         "FORGOT_PASSWORD_SUCCESS": "पासवर्ड रीसेट ओटीपी सफलतापूर्वक भेज दिया गया है",
         "PASSWORD_RESET_SUCCESS": "पासवर्ड सफलतापूर्वक रीसेट हो गया",
-
         "GOOGLE_PASSWORD_RESET": "गूगल खाता पासवर्ड रीसेट का समर्थन नहीं करता है। कृपया गूगल से लॉगिन करें।",
-
         "TOKEN_REQUIRED": "प्रमाणन टोकन (Authentication token) आवश्यक है",
         "INVALID_TOKEN": "अमान्य प्रमाणन टोकन",
         "TOKEN_EXPIRED": "प्रमाणन टोकन की समय सीमा समाप्त हो गई है",
         "TOKEN_REFRESHED": "टोकन सफलतापूर्वक ताज़ा किया गया",
         "UNAUTHORIZED": "अनधिकृत पहुंच (Unauthorized access)",
-
         "ACCOUNT_INACTIVE": "आपका खाता निष्क्रिय है",
         "ACCOUNT_DEACTIVATED": "खाता सफलतापूर्वक निष्क्रिय कर दिया गया है",
         "ACCOUNT_ALREADY_DEACTIVATED": "खाता पहले से ही निष्क्रिय है",
         "ACCOUNT_DELETED": "खाता सफलतापूर्वक हटा दिया गया है",
-
         "EMAIL_VERIFICATION_SUBJECT": "अपना ईमेल सत्यापित करें",
         "PASSWORD_RESET_SUBJECT": "अपना पासवर्ड रीसेट करें",
-        "ACCOUNT_LOCKED": "खाता अस्थायी रूप से लॉक कर दिया गया है"
+        "ACCOUNT_LOCKED": "खाता अस्थायी रूप से लॉक कर दिया गया है",
+        "OTP_LOCKED": "बहुत अधिक गलत प्रयास। OTP अमान्य हो गया है, कृपया नया OTP मंगवाएँ।",
+        "WELCOME_SUBJECT": "स्वागत है! आपका अकाउंट सत्यापित हो गया है",
+        "TOKEN_REUSE_DETECTED": "सुरक्षा चेतावनी: यह सत्र अब मान्य नहीं है। कृपया दोबारा लॉगिन करें।"
     },
-
     "PROFILE": {
         "PROFILE_NOT_FOUND": "प्रोफ़ाइल नहीं मिली",
         "PROFILE_FETCHED": "प्रोफ़ाइल सफलतापूर्वक प्राप्त की गई",
         "PROFILE_UPDATED": "प्रोफ़ाइल सफलतापूर्वक अपडेट की गई"
     },
-
     "BUSINESS": {
         "BUSINESS_NOT_FOUND": "व्यापार प्रोफ़ाइल नहीं मिली",
         "BUSINESS_ALREADY_EXISTS": "व्यापार प्रोफ़ाइल पहले से मौजूद है",
@@ -75,7 +67,6 @@
         "BUSINESS_CREATE_FAILED": "व्यापार प्रोफ़ाइल बनाने में विफल",
         "BUSINESS_UPDATE_FAILED": "व्यापार प्रोफ़ाइल अपडेट करने में विफल"
     },
-
     "CUSTOMER": {
         "CUSTOMER_NOT_FOUND": "ग्राहक नहीं मिला",
         "CUSTOMER_CREATED": "ग्राहक सफलतापूर्वक बनाया गया",
@@ -86,7 +77,6 @@
         "CUSTOMER_CREATE_FAILED": "ग्राहक नहीं बनाया जा सका",
         "CUSTOMER_UPDATE_FAILED": "ग्राहक को अपडेट करने में विफल"
     },
-
     "PRODUCT": {
         "PRODUCT_NOT_FOUND": "उत्पाद नहीं मिला",
         "PRODUCT_CREATED": "उत्पाद सफलतापूर्वक बनाया गया",
@@ -97,7 +87,6 @@
         "PRODUCT_CREATE_FAILED": "उत्पाद नहीं बनाया जा सका",
         "PRODUCT_UPDATE_FAILED": "उत्पाद अपडेट करने में विफल"
     },
-
     "INVOICE": {
         "INVOICE_NOT_FOUND": "चालान (Invoice) नहीं मिला",
         "INVOICE_CREATED": "चालान सफलतापूर्वक बनाया गया",
@@ -108,13 +97,11 @@
         "INVOICE_CREATE_FAILED": "चालान बनाने में विफल",
         "INVOICE_UPDATE_FAILED": "चालान अपडेट करने में विफल",
         "INVOICE_DELETE_FAILED": "चालान हटाने में विफल",
-
         "BUSINESS_REQUIRED": "व्यापार प्रोफ़ाइल आवश्यक है",
         "CUSTOMER_REQUIRED": "ग्राहक आवश्यक है",
         "ITEMS_REQUIRED": "चालान की वस्तुएं (Items) आवश्यक हैं",
         "INVALID_ITEMS": "अमान्य चालान वस्तुएं"
     },
-
     "PDF": {
         "PDF_GENERATED": "चालान पीडीएफ सफलतापूर्वक जेनरेट किया गया",
         "PDF_DOWNLOAD_STARTED": "चालान पीडीएफ जेनरेशन शुरू हो गया है",
@@ -122,7 +109,6 @@
         "PDF_GENERATION_FAILED": "चालान पीडीएफ जेनरेट करने में विफल",
         "PDF_JOB_NOT_FOUND": "पीडीएफ जॉब नहीं मिला"
     },
-
     "EMAIL": {
         "EMAIL_SENT": "ईमेल सफलतापूर्वक भेज दिया गया",
         "EMAIL_FAILED": "ईमेल भेजने में विफल",
@@ -132,7 +118,6 @@
         "INVOICE_EMAIL_FAILED": "चालान ईमेल भेजने में विफल",
         "EMAIL_JOB_NOT_FOUND": "ईमेल जॉब नहीं मिला"
     },
-
     "QUEUE": {
         "JOB_QUEUED": "जॉब कतार में जोड़ दिया गया है",
         "JOB_COMPLETED": "जॉब सफलतापूर्वक पूरा हो गया",
@@ -140,7 +125,6 @@
         "PDF_JOB_QUEUED": "चालान पीडीएफ जॉब कतार में जोड़ दिया गया है",
         "EMAIL_JOB_QUEUED": "ईमेल जॉब कतार में जोड़ दिया गया है"
     },
-
     "VALIDATION": {
         "REQUIRED_FIELDS": "आवश्यक फ़ील्ड गायब हैं",
         "INVALID_DATA": "अमान्य डेटा",
@@ -149,7 +133,6 @@
         "INVALID_AMOUNT": "अमान्य राशि",
         "INVALID_DATE": "अमान्य तिथि"
     },
-
     "AUTHORIZATION": {
         "FORBIDDEN": "आपको यह कार्रवाई करने की अनुमति नहीं है",
         "ACCESS_DENIED": "पहुंच अस्वीकार कर दी गई (Access denied)"

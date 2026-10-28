@@ -1,3 +1,10 @@
+const escapeHtml = (value) =>
+    String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+
 const otpTemplate = (username, otp) => {
     return `
     <!DOCTYPE html>
@@ -25,7 +32,7 @@ const otpTemplate = (username, otp) => {
 
                         <tr>
                             <td>
-                                <p>Hello <strong>${username}</strong>,</p>
+                                <p>Hello <strong>${escapeHtml(username)}</strong>,</p>
 
                                 <p>
                                     Use the OTP below to verify your email address.
@@ -37,7 +44,7 @@ const otpTemplate = (username, otp) => {
                                 </div>
 
                                 <p>
-                                    This OTP is valid for <strong>10 minutes</strong>.
+                                    This OTP is valid for <strong>5 minutes</strong>.
                                 </p>
 
                                 <p>

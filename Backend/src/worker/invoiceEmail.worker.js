@@ -11,7 +11,7 @@ import logger from "../utils/logger.js";
 const invoiceEmailWorker = new Worker(
     "invoice-email",
     async (job) => {
-        const { userId, invoiceId, language } = job.data;
+        const { userId, invoiceId, language = "en" } = job.data;
 
         logger.info(`Processing invoice email job: ${job.id}`);
 
@@ -38,6 +38,7 @@ const invoiceEmailWorker = new Worker(
             html: body,
             senderName: invoice.business?.businessName,
             replyTo: invoice.business?.email,
+            language,
             attachments: [
                 {
                     content: pdfBuffer.toString("base64"),
@@ -48,6 +49,9 @@ const invoiceEmailWorker = new Worker(
 
         // --- MARK AS SENT VIA REPOSITORY ---
         await invoiceRepository.updateById(userId, invoiceId, { sent: true });
+
+        // The cached invoice still says sent=false
+        await redis.del(`invoice:${invoiceId}:${userId}`);
 
         logger.info(`Invoice email sent: ${invoice.invoiceNumber}`);
 

@@ -34,6 +34,13 @@ const errorMiddleware = (err, req, res, next) => {
         errors = { [err.path]: `Malformed ID or invalid type provided.` };
     }
 
+    // Never leak internal error details (DB errors, stack hints...) for unexpected 5xx errors
+    // in production. Intentional ApiErrors keep their own message.
+    if (statusCode >= 500 && !err.statusCode && process.env.NODE_ENV === "production") {
+        message = "Internal server error";
+        errors = null;
+    }
+
     // Send server errors (5xx) to Sentry, skip client errors (4xx) to avoid noise
     if (statusCode >= 500) {
         Sentry.captureException(err);

@@ -51,9 +51,12 @@ jobs:
         run: npm test
         env:
           PORT: 5000
-          MONGO_URI: mongodb://localhost:27017/test-db
-          REDIS_HOST: localhost
-          REDIS_PORT: 6379
+          MONGODB_URI: mongodb://localhost:27017/test-db
+          REDIS_URL: redis://localhost:6379
+          CLIENT_URL: http://localhost:5173
+          BREVO_API_KEY: test_brevo_key
+          EMAIL_USER: test@example.com
+          CACHE_ENCRYPTION_KEY: 00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff
           ACCESS_TOKEN_SECRET: test_access_secret_key_12345
           REFRESH_TOKEN_SECRET: test_refresh_secret_key_12345
 

@@ -14,7 +14,8 @@ export const getDashboard = TryCatch(async (req, res) => {
 
         search: req.query.search,
 
-        paymentStatus: req.query.paymentStatus,
+        // `status` is the name used in the Swagger docs, `paymentStatus` the one the frontend sends
+        paymentStatus: req.query.paymentStatus ?? req.query.status,
 
         customerId: req.query.customerId,
 
@@ -22,9 +23,12 @@ export const getDashboard = TryCatch(async (req, res) => {
 
         endDate: req.query.endDate,
 
-        sortBy: req.query.sortBy,
+        // Swagger documents `sort=-createdAt`; the frontend sends sortBy + sortOrder
+        sortBy: req.query.sortBy ?? String(req.query.sort ?? "").replace(/^-/, "") ?? undefined,
 
-        sortOrder: req.query.sortOrder,
+        sortOrder:
+            req.query.sortOrder ??
+            (String(req.query.sort ?? "").startsWith("-") ? "desc" : undefined),
     };
 
     const dashboard = await getDashboardService(userId, options, req.language);

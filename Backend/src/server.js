@@ -1,28 +1,9 @@
-import "dotenv/config";
-
-// Validate required environment variables at startup
-const requiredEnvVars = [
-    "MONGODB_URI",
-    "ACCESS_TOKEN_SECRET",
-    "REFRESH_TOKEN_SECRET",
-    "BREVO_API_KEY",
-    "EMAIL_USER",
-    "CLIENT_URL",
-];
-
-const missingEnvVars = requiredEnvVars.filter(
-    (key) => !process.env[key] || process.env[key].trim() === ""
-);
-if (missingEnvVars.length > 0) {
-    console.error(
-        `❌ Startup Error: Missing required environment variables in .env: ${missingEnvVars.join(", ")}`
-    );
-    process.exit(1);
-}
+import "./config/env.js"; // loads .env and validates required variables (must stay the first import)
 
 import app from "./app.js";
 import connectDB from "./config/db.js";
 import redis from "./config/redis.js";
+import { TRANSIENT_SOCKET_ERROR_CODES } from "./config/env.js";
 import gracefulShutdown from "./utils/gracefulShutdown.js";
 import logger from "./utils/logger.js";
 
@@ -30,6 +11,12 @@ import logger from "./utils/logger.js";
 // Process-Level Error Handlers
 // ==========================================
 process.on("uncaughtException", (error) => {
+    // Redis/BullMQ socket drops are retried automatically; do not crash the API for them.
+    if (TRANSIENT_SOCKET_ERROR_CODES.includes(error?.code)) {
+        logger.warn(`Ignored transient socket error: ${error.code}`);
+        return;
+    }
+
     logger.error({
         message: "Uncaught Exception detected! Shutting down process...",
         error: error.message,
@@ -38,7 +25,7 @@ process.on("uncaughtException", (error) => {
     process.exit(1);
 });
 
-process.on("unhandledRejection", (reason, promise) => {
+process.on("unhandledRejection", (reason) => {
     logger.error({
         message: "Unhandled Promise Rejection detected! Shutting down process...",
         reason: reason?.message || reason,
@@ -75,7 +62,7 @@ const startServer = async () => {
         process.on("SIGTERM", () => shutdownHandler("SIGTERM"));
         process.on("SIGINT", () => shutdownHandler("SIGINT"));
     } catch (error) {
-        logger.error("Server failed to start:", error.message);
+        logger.error(`Server failed to start: ${error.message}`);
         process.exit(1);
     }
 };

@@ -52,7 +52,7 @@ class UserRepository {
                 isVerified: true,
             },
             {
-                new: true,
+                returnDocument: "after",
             }
         );
     }
@@ -87,11 +87,20 @@ class UserRepository {
         );
     }
 
+    // Atomically increments the failed login counter and returns the updated user
+    async incrementFailedLoginAttempts(id) {
+        return await User.findByIdAndUpdate(
+            id,
+            { $inc: { failedLoginAttempts: 1 } },
+            { returnDocument: "after" }
+        );
+    }
+
     //update
 
     async updateProfile(id, data) {
         return await User.findByIdAndUpdate(id, data, {
-            new: true,
+            returnDocument: "after",
             runValidators: true, //first run schema validation like min:18, include:@ then update
         });
     }

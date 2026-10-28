@@ -7,7 +7,7 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "prepare": "husky || true",
-    "test": "echo \"Error: no test specified\" && exit 0"
+    "test": "node --test"
   },
   "lint-staged": {
     "*.js": [
@@ -50,5 +50,8 @@
     "lint-staged": "^17.6.0",
     "nodemon": "^3.1.14",
     "prettier": "^3.9.10"
+  },
+  "engines": {
+    "node": ">=20"
   }
 }

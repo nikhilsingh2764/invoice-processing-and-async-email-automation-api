@@ -26,6 +26,8 @@ import {
     changePasswordValidator,
     forgotPasswordValidator,
     resetPasswordValidator,
+    googleLoginValidator,
+    deleteAccountValidator,
 } from "../../validators/auth.validator.js";
 
 import {
@@ -34,6 +36,7 @@ import {
     verifyOtpLimiter,
     signupLimiter,
     loginLimiter,
+    googleLoginLimiter,
 } from "../../middleware/rateLimiter.middleware.js";
 
 const router = express.Router();
@@ -247,7 +250,9 @@ router.get("/profile", apiLimiter, authMiddleware, Profile);
  *         description: Internal server error
  */
 
-router.post("/logout", authMiddleware, Logout);
+// No authMiddleware: logout must still work when the short-lived access token has already
+// expired, otherwise the refresh token would stay valid. It only acts on the refresh cookie.
+router.post("/logout", Logout);
 
 /**
  * @swagger
@@ -426,7 +431,14 @@ router.patch("/deactivate-account", apiLimiter, authMiddleware, DeactivateAccoun
  *         description: Internal server error
  */
 
-router.delete("/delete-account", apiLimiter, authMiddleware, DeleteAccount);
+router.delete(
+    "/delete-account",
+    apiLimiter,
+    authMiddleware,
+    deleteAccountValidator,
+    validate,
+    DeleteAccount
+);
 
 /**
  * @swagger
@@ -532,6 +544,6 @@ router.post(
 
 router.post("/reset-password", verifyOtpLimiter, resetPasswordValidator, validate, ResetPassword);
 
-router.post("/google", googleLoginController);
+router.post("/google", googleLoginLimiter, googleLoginValidator, validate, googleLoginController);
 
 export default router;

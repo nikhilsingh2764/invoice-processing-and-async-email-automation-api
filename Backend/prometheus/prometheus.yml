@@ -6,5 +6,13 @@ scrape_configs:
 
     metrics_path: "/api/v1/metrics"
 
+    # The metrics endpoint is protected with HTTP Basic Auth (METRICS_USER / METRICS_PASSWORD
+    # from the API's .env). Put the same values here. Do not commit real credentials:
+    # use `password_file` with a mounted secret in production.
+    basic_auth:
+      username: "CHANGE_ME_METRICS_USER"
+      password: "CHANGE_ME_METRICS_PASSWORD"
+
     static_configs:
-      - targets: ["172.17.0.1:8000"]
+      # "api" is the service name in docker-compose.yml (same network as Prometheus)
+      - targets: ["api:8000"]

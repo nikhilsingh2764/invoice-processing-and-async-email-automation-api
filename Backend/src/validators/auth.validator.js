@@ -66,7 +66,23 @@ export const LoginValidator = [
         .withMessage("Invalid email format")
         .normalizeEmail(),
 
-    passwordValidator("password"),
+    // Login only checks that a password was sent. The complexity rules apply when a password is
+    // CREATED (signup / reset / change); enforcing them here would lock out valid accounts.
+    body("password").isString().notEmpty().withMessage("password is required"),
+];
+
+export const googleLoginValidator = [
+    body("idToken")
+        .isString()
+        .withMessage("Google token is required")
+        .bail()
+        .trim()
+        .notEmpty()
+        .withMessage("Google token is required"),
+];
+
+export const deleteAccountValidator = [
+    body("password").isString().notEmpty().withMessage("password is required"),
 ];
 
 export const updateProfileValidator = [

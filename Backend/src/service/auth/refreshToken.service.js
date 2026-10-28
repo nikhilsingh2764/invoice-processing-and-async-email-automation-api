@@ -2,10 +2,38 @@ import jwt from "jsonwebtoken";
 import logger from "../../utils/logger.js";
 import translate from "../../utils/translate.js";
 import ApiError from "../../utils/ApiError.js";
+import redis from "../../config/redis.js";
 import userRepository from "../../repository/auth/user.repository.js";
-import generateToken from "../../utils/generateToken.js";
 import refreshTokenRepository from "../../repository/auth/refreshToken.repository.js";
 import hashToken from "../../utils/hashToken.js";
+import { issueTokenPair } from "../../utils/tokens.js";
+
+// Browsers can fire several refresh requests at once (multiple tabs / parallel API calls).
+// The first one rotates the token; the others receive the SAME new pair for a few seconds
+// instead of being treated as token theft.
+const GRACE_SECONDS = 10;
+const GRACE_POLL_ATTEMPTS = 10;
+const GRACE_POLL_INTERVAL_MS = 150;
+
+const graceKey = (oldTokenHash) => `refresh:grace:${oldTokenHash}`;
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+// Looks for the token pair created by a concurrent request that already rotated this token.
+const findGracePair = async (oldTokenHash) => {
+    for (let attempt = 0; attempt < GRACE_POLL_ATTEMPTS; attempt++) {
+        const cached = await redis.get(graceKey(oldTokenHash));
+
+        if (cached) {
+            const { newAccessToken, newRefreshToken } = JSON.parse(cached);
+            return { newAccessToken, newRefreshToken };
+        }
+
+        await sleep(GRACE_POLL_INTERVAL_MS);
+    }
+
+    return null;
+};
 
 const RefreshTokenService = async (refreshToken, language = "en") => {
     // Check refresh token exists
@@ -18,44 +46,31 @@ const RefreshTokenService = async (refreshToken, language = "en") => {
     let decoded;
 
     try {
-        decoded = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET);
+        decoded = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET, {
+            algorithms: ["HS256"],
+        });
     } catch (error) {
         logger.warn("Refresh token verification failed");
         throw new ApiError(401, translate("AUTH.INVALID_TOKEN", language));
     }
 
-    // Hash the incoming token to check against database
     const hashedIncomingToken = hashToken(refreshToken);
-    let storedToken = await refreshTokenRepository.findByTokenHash(hashedIncomingToken);
+
+    // Atomically take the stored token. Only one concurrent request can succeed.
+    const storedToken = await refreshTokenRepository.consumeByTokenHash(hashedIncomingToken);
 
     if (!storedToken) {
-        // RACE CONDITION GRACE PERIOD CHECK:
-        // Check if this token was recently rotated (e.g., within the last 10 seconds).
-        // This handles concurrent requests from multiple browser tabs seamlessly.
-        const recentlyRotatedToken = (await refreshTokenRepository.findRecentlyRotatedByHash)
-            ? await refreshTokenRepository.findRecentlyRotatedByHash(hashedIncomingToken)
-            : null; // Fallback if your repo doesn't have this yet, or you can check token family/rotated records
+        // Rotated a moment ago by a parallel request? Hand out the same new pair.
+        const gracePair = await findGracePair(hashedIncomingToken);
 
-        // Alternatively, if you track replacement tokens directly on rotation:
-        if (storedToken && storedToken.replacementAccessToken) {
-            return {
-                newAccessToken: storedToken.replacementAccessToken,
-                newRefreshToken: storedToken.replacementRefreshToken,
-            };
-        }
-
-        // If your repository retains rotated records with grace windows:
-        if (recentlyRotatedToken && recentlyRotatedToken.replacementAccessToken) {
+        if (gracePair) {
             logger.warn(
                 `Concurrent refresh race condition handled via grace period for user: ${decoded.id}`
             );
-            return {
-                newAccessToken: recentlyRotatedToken.replacementAccessToken,
-                newRefreshToken: recentlyRotatedToken.replacementRefreshToken,
-            };
+            return gracePair;
         }
 
-        // REUSE DETECTION / THEFT ALERT (True attack scenario outside grace period):
+        // REUSE DETECTION: a token that was already used (or revoked) comes back later.
         try {
             await refreshTokenRepository.revokeAllUserSessions(decoded.id);
             logger.error(
@@ -72,12 +87,18 @@ const RefreshTokenService = async (refreshToken, language = "en") => {
         );
     }
 
-    // 4. Check if token is marked revoked or expired explicitly
+    // The token record must belong to the user inside the JWT
+    if (String(storedToken.userId) !== String(decoded.id)) {
+        logger.error(`Refresh token user mismatch for token owner ${storedToken.userId}`);
+        throw new ApiError(401, translate("AUTH.INVALID_TOKEN", language));
+    }
+
+    // Check if token is marked revoked or expired explicitly
     if (storedToken.isRevoked || new Date() > storedToken.expiresAt) {
         throw new ApiError(403, translate("AUTH.TOKEN_EXPIRED", language));
     }
 
-    // 5. Find user
+    // Find user
     const user = await userRepository.findById(decoded.id);
 
     if (!user) {
@@ -85,82 +106,39 @@ const RefreshTokenService = async (refreshToken, language = "en") => {
         throw new ApiError(401, translate("AUTH.USER_NOT_FOUND", language));
     }
 
-    // 6. Check account status
+    // Check account status
     if (!user.isActive) {
         logger.warn(`Refresh token used for inactive account: ${user._id}`);
         throw new ApiError(403, translate("AUTH.ACCOUNT_INACTIVE", language));
     }
 
-    // 8. Generate new access token
-    const newAccessToken = generateToken(
-        {
-            id: user._id,
-            email: user.email,
-        },
-        process.env.ACCESS_TOKEN_SECRET,
-        process.env.ACCESS_TOKEN_EXPIRES_IN || "15m"
-    );
+    // Generate the new token pair and store only the HASH of the new refresh token
+    const {
+        accessToken,
+        refreshToken: newRefreshToken,
+        refreshTokenHash,
+        refreshTokenExpiresAt,
+    } = issueTokenPair(user);
 
-    // 9. Generate new refresh token
-    const newRefreshToken = generateToken(
-        {
-            id: user._id,
-        },
-        process.env.REFRESH_TOKEN_SECRET,
-        process.env.REFRESH_TOKEN_EXPIRES_IN || "15d"
-    );
-
-    const parseExpiresInToMs = (expiresInStr) => {
-        if (!expiresInStr) return 15 * 24 * 60 * 60 * 1000;
-        if (typeof expiresInStr === "number") return expiresInStr;
-        const match = expiresInStr.match(/^(\d+)([d|h|m|s])$/);
-        if (!match) return 15 * 24 * 60 * 60 * 1000;
-        const val = parseInt(match[1], 10);
-        const unit = match[2];
-        switch (unit) {
-            case "d":
-                return val * 24 * 60 * 60 * 1000;
-            case "h":
-                return val * 60 * 60 * 1000;
-            case "m":
-                return val * 60 * 1000;
-            case "s":
-                return val * 1000;
-            default:
-                return 15 * 24 * 60 * 60 * 1000;
-        }
-    };
-
-    const refreshTokenExpiresAt = new Date(
-        Date.now() + parseExpiresInToMs(process.env.REFRESH_TOKEN_EXPIRES_IN)
-    );
-
-    const newTokenHash = hashToken(newRefreshToken);
-
-    // 7 & 11. ROTATION WITH GRACE PERIOD STORAGE:
-    // Instead of completely deleting the old token instantly, mark it as rotated,
-    // attach the newly generated tokens, and set a short expiry window (e.g., 10 seconds) for race handling.
-    const gracePeriodExpiry = new Date(Date.now() + 10 * 1000); // 10 seconds grace period
-
-    await refreshTokenRepository.updateByTokenHash(hashedIncomingToken, {
-        isRevoked: true,
-        replacementAccessToken: newAccessToken,
-        replacementRefreshToken: newRefreshToken,
-        gracePeriodUntil: gracePeriodExpiry,
-    });
-
-    // Save the HASH of the new refresh token
     await refreshTokenRepository.create({
         userId: user._id,
-        tokenHash: newTokenHash,
+        tokenHash: refreshTokenHash,
         expiresAt: refreshTokenExpiresAt,
     });
 
+    // Keep the new pair in Redis for a few seconds so parallel requests with the old token
+    // receive the same result (see findGracePair).
+    await redis.set(
+        graceKey(hashedIncomingToken),
+        JSON.stringify({ newAccessToken: accessToken, newRefreshToken }),
+        "EX",
+        GRACE_SECONDS
+    );
+
     logger.info(`Refresh token rotated successfully: ${user._id}`);
 
-    // 12. Return new token pair
     return {
-        newAccessToken,
+        newAccessToken: accessToken,
         newRefreshToken,
     };
 };

@@ -1,4 +1,5 @@
 import Invoice from "../../model/invoice/invoice.model.js";
+import { PAYMENT_STATUS } from "../../utils/invoice.constant.js";
 
 class InvoiceRepository {
     async create(userData, session = null) {
@@ -22,7 +23,7 @@ class InvoiceRepository {
             },
             updatedData,
             {
-                new: true,
+                returnDocument: "after",
                 runValidators: true,
                 session,
             }
@@ -33,10 +34,12 @@ class InvoiceRepository {
         return await Invoice.findOneAndDelete({ _id: invoiceId, userId }, { session });
     }
 
+    // Invoices that are past their due date but still waiting for payment.
+    // Paid, Cancelled, Draft and already Overdue invoices must never be touched.
     async findInvoicesNeedingOverdueStatus(session = null) {
         return await Invoice.find({
             dueDate: { $lt: new Date() },
-            status: { $nin: ["PAID", "OVERDUE"] },
+            status: { $in: [PAYMENT_STATUS.PENDING, PAYMENT_STATUS.PARTIALLY_PAID] },
         }).session(session);
     }
 }

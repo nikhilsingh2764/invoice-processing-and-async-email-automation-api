@@ -9,13 +9,11 @@
         "INTERNAL_ERROR": "Internal server error",
         "DASHBOARD_FETCHED": "Dashboard fetched successfully"
     },
-
     "AUTH": {
         "USER_NOT_FOUND": "User not found",
         "USER_ALREADY_EXISTS": "User already exists",
         "EMAIL_ALREADY_EXISTS": "Email already exists",
         "USERNAME_ALREADY_EXISTS": "Username already exists",
-
         "EMAIL_REQUIRED": "Email is required",
         "PASSWORD_REQUIRED": "Password is required",
         "INVALID_EMAIL": "Invalid email address",
@@ -25,46 +23,40 @@
         "RESET_PASSWORD_FIELDS_REQUIRED": "Email, OTP and new password are required",
         "PASSWORD_UPDATED": "Password updated successfully",
         "OLD_PASSWORD_INCORRECT": "Old password is incorrect",
-
         "SIGNUP_SUCCESS": "Account created successfully",
         "LOGIN_SUCCESS": "Login successful",
         "GOOGLE_LOGIN_SUCCESS": "Google login successful",
         "LOGOUT_SUCCESS": "Logout successful",
-
         "EMAIL_NOT_VERIFIED": "Please verify your email first",
         "EMAIL_VERIFIED": "Email verified successfully",
         "INVALID_OTP": "Invalid OTP",
         "OTP_EXPIRED": "OTP has expired",
         "OTP_REQUIRED": "OTP is required",
         "OTP_SENT": "OTP sent successfully",
-
         "FORGOT_PASSWORD_SUCCESS": "Password reset OTP sent successfully",
         "PASSWORD_RESET_SUCCESS": "Password reset successfully",
-
         "GOOGLE_PASSWORD_RESET": "Google account does not support password reset. Please login with Google.",
-
         "TOKEN_REQUIRED": "Authentication token is required",
         "INVALID_TOKEN": "Invalid authentication token",
         "TOKEN_EXPIRED": "Authentication token has expired",
         "TOKEN_REFRESHED": "Token refreshed successfully",
         "UNAUTHORIZED": "Unauthorized access",
-
         "ACCOUNT_INACTIVE": "Your account is inactive",
         "ACCOUNT_DEACTIVATED": "Account deactivated successfully",
         "ACCOUNT_ALREADY_DEACTIVATED": "Account is already deactivated",
         "ACCOUNT_DELETED": "Account deleted successfully",
-
         "EMAIL_VERIFICATION_SUBJECT": "Verify Your Email",
         "PASSWORD_RESET_SUBJECT": "Reset Your Password",
-        "ACCOUNT_LOCKED": "Account temporarily locked"
+        "ACCOUNT_LOCKED": "Account temporarily locked",
+        "OTP_LOCKED": "Too many failed attempts. The OTP has been invalidated, please request a new one.",
+        "WELCOME_SUBJECT": "Welcome! Your account is verified",
+        "TOKEN_REUSE_DETECTED": "Security alert: this session is no longer valid. Please log in again."
     },
-
     "PROFILE": {
         "PROFILE_NOT_FOUND": "Profile not found",
         "PROFILE_FETCHED": "Profile fetched successfully",
         "PROFILE_UPDATED": "Profile updated successfully"
     },
-
     "BUSINESS": {
         "BUSINESS_NOT_FOUND": "Business profile not found",
         "BUSINESS_ALREADY_EXISTS": "Business profile already exists",
@@ -75,7 +67,6 @@
         "BUSINESS_CREATE_FAILED": "Failed to create business profile",
         "BUSINESS_UPDATE_FAILED": "Failed to update business profile"
     },
-
     "CUSTOMER": {
         "CUSTOMER_NOT_FOUND": "Customer not found",
         "CUSTOMER_CREATED": "Customer created successfully",
@@ -86,7 +77,6 @@
         "CUSTOMER_CREATE_FAILED": "Customer could not be created",
         "CUSTOMER_UPDATE_FAILED": "Failed to update customer"
     },
-
     "PRODUCT": {
         "PRODUCT_NOT_FOUND": "Product not found",
         "PRODUCT_CREATED": "Product created successfully",
@@ -97,7 +87,6 @@
         "PRODUCT_CREATE_FAILED": "Product could not be created",
         "PRODUCT_UPDATE_FAILED": "Failed to update product"
     },
-
     "INVOICE": {
         "INVOICE_NOT_FOUND": "Invoice not found",
         "INVOICE_CREATED": "Invoice created successfully",
@@ -108,13 +97,11 @@
         "INVOICE_CREATE_FAILED": "Failed to create invoice",
         "INVOICE_UPDATE_FAILED": "Failed to update invoice",
         "INVOICE_DELETE_FAILED": "Failed to delete invoice",
-
         "BUSINESS_REQUIRED": "Business profile is required",
         "CUSTOMER_REQUIRED": "Customer is required",
         "ITEMS_REQUIRED": "Invoice items are required",
         "INVALID_ITEMS": "Invalid invoice items"
     },
-
     "PDF": {
         "PDF_GENERATED": "Invoice PDF generated successfully",
         "PDF_DOWNLOAD_STARTED": "Invoice PDF generation started",
@@ -122,7 +109,6 @@
         "PDF_GENERATION_FAILED": "Failed to generate invoice PDF",
         "PDF_JOB_NOT_FOUND": "PDF job not found"
     },
-
     "EMAIL": {
         "EMAIL_SENT": "Email sent successfully",
         "EMAIL_FAILED": "Failed to send email",
@@ -132,7 +118,6 @@
         "INVOICE_EMAIL_FAILED": "Failed to send invoice email",
         "EMAIL_JOB_NOT_FOUND": "Email job not found"
     },
-
     "QUEUE": {
         "JOB_QUEUED": "Job queued successfully",
         "JOB_COMPLETED": "Job completed successfully",
@@ -140,7 +125,6 @@
         "PDF_JOB_QUEUED": "Invoice PDF job queued successfully",
         "EMAIL_JOB_QUEUED": "Email job queued successfully"
     },
-
     "VALIDATION": {
         "REQUIRED_FIELDS": "Required fields are missing",
         "INVALID_DATA": "Invalid data",
@@ -149,7 +133,6 @@
         "INVALID_AMOUNT": "Invalid amount",
         "INVALID_DATE": "Invalid date"
     },
-
     "AUTHORIZATION": {
         "FORBIDDEN": "You do not have permission to perform this action",
         "ACCESS_DENIED": "Access denied"

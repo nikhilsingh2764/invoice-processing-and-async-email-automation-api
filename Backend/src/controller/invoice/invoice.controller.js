@@ -82,7 +82,10 @@ export const downloadInvoicePDF = TryCatch(async (req, res) => {
 
         res.setHeader("Content-Length", result.pdfBuffer.length);
 
-        res.setHeader("Content-Disposition", `attachment; filename="${result.invoiceNumber}.pdf"`);
+        res.setHeader(
+            "Content-Disposition",
+            `attachment; filename="${String(result.invoiceNumber).replace(/[^A-Za-z0-9._-]/g, "_")}.pdf"`
+        );
 
         return res.send(result.pdfBuffer);
     }
@@ -101,6 +104,11 @@ export const getInvoicePDFStatus = TryCatch(async (req, res) => {
     const job = await invoicePDFQueue.getJob(jobId);
 
     if (!job) {
+        throw new ApiError(404, translate("PDF.PDF_JOB_NOT_FOUND", req.language));
+    }
+
+    // A user may only see the status of their own jobs
+    if (job.data?.userId !== String(req.user._id)) {
         throw new ApiError(404, translate("PDF.PDF_JOB_NOT_FOUND", req.language));
     }
 
@@ -133,6 +141,10 @@ export const getInvoiceEmailStatus = TryCatch(async (req, res) => {
     const job = await invoiceEmailQueue.getJob(jobId);
 
     if (!job) {
+        throw new ApiError(404, translate("EMAIL.EMAIL_JOB_NOT_FOUND", req.language));
+    }
+
+    if (job.data?.userId !== String(req.user._id)) {
         throw new ApiError(404, translate("EMAIL.EMAIL_JOB_NOT_FOUND", req.language));
     }
 

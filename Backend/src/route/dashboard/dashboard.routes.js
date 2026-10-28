@@ -1,6 +1,8 @@
 import express from "express";
 
 import authMiddleware from "../../middleware/auth.middleware.js";
+import validate from "../../middleware/validate.js";
+import { dashboardValidator } from "../../validators/dashboard.validator.js";
 
 import { getDashboard } from "../../controller/dashboard/dashboard.controller.js";
 
@@ -94,6 +96,6 @@ const router = express.Router();
  *         description: Internal server error
  */
 
-router.get("/", authMiddleware, getDashboard);
+router.get("/", authMiddleware, dashboardValidator, validate, getDashboard);
 
 export default router;

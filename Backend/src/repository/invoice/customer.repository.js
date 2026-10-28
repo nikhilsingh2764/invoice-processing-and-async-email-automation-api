@@ -45,7 +45,7 @@ class CustomerRepository {
             },
             updatedData,
             {
-                new: true,
+                returnDocument: "after",
                 runValidators: true,
             }
         );

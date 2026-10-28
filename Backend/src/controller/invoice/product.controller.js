@@ -30,11 +30,13 @@ export const createProduct = TryCatch(async (req, res) => {
 export const getAllProducts = TryCatch(async (req, res) => {
     const userId = req.user._id;
 
-    const products = await getAllProductsService(userId, req.language);
+    const { products, pagination } = await getAllProductsService(userId, req.query, req.language);
 
-    return res
-        .status(200)
-        .json(new ApiResponse(200, translate("PRODUCT.PRODUCTS_FETCHED", req.language), products));
+    // `data` stays a plain array (what the frontend consumes); pagination travels beside it.
+    return res.status(200).json({
+        ...new ApiResponse(200, translate("PRODUCT.PRODUCTS_FETCHED", req.language), products),
+        pagination,
+    });
 });
 
 // Get Product By ID

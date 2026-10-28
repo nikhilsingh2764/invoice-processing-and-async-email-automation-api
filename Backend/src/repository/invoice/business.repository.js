@@ -7,7 +7,7 @@ class BusinessRepository {
         return await Business.create(userdata);
     }
 
-    //find Business profile using userId  and email
+    // find Business profile using userId and email
 
     async findByUserId(userId) {
         return await Business.findOne({ userId });
@@ -29,7 +29,7 @@ class BusinessRepository {
     //know we use findOneAndUpdate allow to search on any feilds like in this userId
     async updateByUserId(userId, data) {
         return await Business.findOneAndUpdate({ userId }, data, {
-            new: true,
+            returnDocument: "after",
             runValidators: true,
         });
     }
@@ -40,6 +40,9 @@ class BusinessRepository {
         return await Business.exists({ userId });
     }
 
+    // Atomically increments the invoice counter and returns the UPDATED business document.
+    // The stored counter is the number of the invoice being created (the frontend relies on
+    // "first invoice = invoiceStartNumber + 1"), so existing invoice numbers stay valid.
     async incrementInvoiceNumber(userId, session = null) {
         return await Business.findOneAndUpdate(
             { userId },
@@ -47,16 +50,20 @@ class BusinessRepository {
                 {
                     $set: {
                         nextInvoiceNumber: {
-                            $cond: {
-                                if: { $gt: ["$nextInvoiceNumber", 0] },
-                                then: { $add: ["$nextInvoiceNumber", 1] },
-                                else: { $ifNull: ["$invoiceStartNumber", 1] },
-                            },
+                            $add: [
+                                {
+                                    $ifNull: [
+                                        "$nextInvoiceNumber",
+                                        { $ifNull: ["$invoiceStartNumber", 1] },
+                                    ],
+                                },
+                                1,
+                            ],
                         },
                     },
                 },
             ],
-            { new: true, session }
+            { returnDocument: "after", session }
         );
     }
 }

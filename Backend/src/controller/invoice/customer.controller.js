@@ -28,13 +28,13 @@ export const createCustomer = TryCatch(async (req, res) => {
 export const getAllCustomers = TryCatch(async (req, res) => {
     const userId = req.user._id;
 
-    const customers = await getAllCustomersService(userId, req.language);
+    const { customers, pagination } = await getAllCustomersService(userId, req.query, req.language);
 
-    return res
-        .status(200)
-        .json(
-            new ApiResponse(200, translate("CUSTOMER.CUSTOMERS_FETCHED", req.language), customers)
-        );
+    // `data` stays a plain array (what the frontend consumes); pagination travels beside it.
+    return res.status(200).json({
+        ...new ApiResponse(200, translate("CUSTOMER.CUSTOMERS_FETCHED", req.language), customers),
+        pagination,
+    });
 });
 
 export const getCustomerById = TryCatch(async (req, res) => {

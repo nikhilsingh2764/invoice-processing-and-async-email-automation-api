@@ -3,6 +3,8 @@ import { Worker } from "bullmq";
 import redis from "../config/redis.js";
 import invoiceRepository from "../repository/invoice/invoice.repository.js";
 import logger from "../utils/logger.js";
+import { PAYMENT_STATUS } from "../utils/invoice.constant.js";
+import { invalidateDashboardCache } from "../service/dashboard/dashboard.service.js";
 
 const overdueWorker = new Worker(
     "overdue-queue",
@@ -18,20 +20,28 @@ const overdueWorker = new Worker(
         }
 
         let processedCount = 0;
+        const affectedUsers = new Set();
 
         for (const invoice of overdueInvoices) {
             const userId = invoice.userId.toString();
             const invoiceId = invoice._id.toString();
 
             // 1. Update invoice status to Overdue in the database
-            await invoiceRepository.updateById(userId, invoiceId, { status: "Overdue" });
+            await invoiceRepository.updateById(userId, invoiceId, {
+                status: PAYMENT_STATUS.OVERDUE,
+            });
 
-            // 2. Clear Redis cache to prevent stale data
+            // 2. Clear Redis cache to prevent stale data (PDF cache keys are versioned by
+            //    updatedAt, so a changed invoice automatically gets a fresh PDF)
             await redis.del(`invoice:${invoiceId}:${userId}`);
-            await redis.del(`invoice:pdf:${userId}:${invoiceId}`);
+            affectedUsers.add(userId);
 
             processedCount++;
             logger.info(`Invoice ${invoiceId} marked as overdue and Redis cache cleared.`);
+        }
+
+        for (const userId of affectedUsers) {
+            await invalidateDashboardCache(userId);
         }
 
         return { processedCount };

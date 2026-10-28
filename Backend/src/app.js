@@ -4,6 +4,8 @@ import express from "express";
 import helmet from "helmet";
 import cors from "cors";
 import cookieParser from "cookie-parser";
+import ApiError from "./utils/ApiError.js";
+import { getAllowedOrigins } from "./config/env.js";
 
 import i18next from "./config/i18n.js";
 import middleware from "i18next-http-middleware";
@@ -35,10 +37,24 @@ app.set("trust proxy", 1);
 // Security
 app.use(helmet());
 
+// CLIENT_URL can hold one origin or a comma separated list. Origins are compared without a
+// trailing slash, exactly as browsers send them in the Origin header.
+const allowedOrigins = getAllowedOrigins();
+
 app.use(
     cors({
-        origin: process.env.CLIENT_URL,
+        origin: (origin, callback) => {
+            // Requests without an Origin header (curl, server-to-server, health probes) are not
+            // browser cross-site requests, so CORS does not apply. State-changing requests are
+            // still protected by the CSRF middleware below.
+            if (!origin || allowedOrigins.includes(origin)) {
+                return callback(null, true);
+            }
+            return callback(null, false);
+        },
         credentials: true,
+        methods: ["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
+        allowedHeaders: ["Content-Type", "X-Requested-With", "Accept", "Accept-Language"],
     })
 );
 
@@ -82,6 +98,11 @@ app.get("/health", (req, res) => {
 });
 
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+
+// Unknown routes -> JSON 404 (instead of Express' default HTML page)
+app.use((req, res, next) => {
+    next(new ApiError(404, `Route not found: ${req.method} ${req.originalUrl}`));
+});
 
 // Global Error Handler (ALWAYS LAST)
 app.use(errorMiddleware);

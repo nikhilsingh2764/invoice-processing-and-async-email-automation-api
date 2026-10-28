@@ -112,7 +112,7 @@ export const DeactivateAccount = TryCatch(async (req, res) => {
 export const DeleteAccount = TryCatch(async (req, res) => {
     const userId = req.user._id;
 
-    const { password } = req.body;
+    const { password } = req.body || {};
 
     await DeleteAccountService(userId, password, req.language);
 

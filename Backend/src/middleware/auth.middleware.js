@@ -18,8 +18,14 @@ const authMiddleware = TryCatch(async (req, res, next) => {
     let decoded;
 
     try {
-        decoded = jwt.verify(accessToken, process.env.ACCESS_TOKEN_SECRET);
+        decoded = jwt.verify(accessToken, process.env.ACCESS_TOKEN_SECRET, {
+            algorithms: ["HS256"],
+        });
     } catch (error) {
+        throw new ApiError(401, translate("AUTH.INVALID_TOKEN", req.language));
+    }
+
+    if (!decoded?.id) {
         throw new ApiError(401, translate("AUTH.INVALID_TOKEN", req.language));
     }
 

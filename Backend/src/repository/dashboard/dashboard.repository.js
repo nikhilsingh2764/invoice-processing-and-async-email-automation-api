@@ -4,10 +4,19 @@ import Customer from "../../model/invoice/customer.model.js";
 import Product from "../../model/invoice/product.model.js";
 import { PAYMENT_STATUS } from "../../utils/invoice.constant.js";
 
-// Helper to escape special regex characters and prevent ReDoS / injection
-const escapeRegExp = (string) => {
-    return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+import { escapeRegExp } from "../../utils/escapeRegExp.js";
+
+// Revenue of one invoice: a Paid invoice counts in full, other invoices count what was paid so far
+const REVENUE_EXPR = {
+    $cond: [{ $eq: ["$status", PAYMENT_STATUS.PAID] }, "$grandTotal", "$amountPaid"],
 };
+
+// Statuses that still wait for money
+const OPEN_STATUSES = [
+    PAYMENT_STATUS.PENDING,
+    PAYMENT_STATUS.PARTIALLY_PAID,
+    PAYMENT_STATUS.OVERDUE,
+];
 
 class DashboardRepository {
     // Dashboard Statistics (Combined into a single $facet aggregation pipeline for invoices)
@@ -39,20 +48,40 @@ class DashboardRepository {
                             { $match: { status: PAYMENT_STATUS.PENDING } },
                             { $count: "count" },
                         ],
-                        // 4. Overdue Invoices Count (Pending + DueDate passed)
+                        // 4. Overdue Invoices Count: marked Overdue, or still waiting for payment
+                        //    after the due date (the nightly job has not run yet)
                         overdueInvoices: [
-                            { $match: { status: PAYMENT_STATUS.PENDING, dueDate: { $lt: now } } },
+                            {
+                                $match: {
+                                    $or: [
+                                        { status: PAYMENT_STATUS.OVERDUE },
+                                        {
+                                            status: {
+                                                $in: [
+                                                    PAYMENT_STATUS.PENDING,
+                                                    PAYMENT_STATUS.PARTIALLY_PAID,
+                                                ],
+                                            },
+                                            dueDate: { $lt: now },
+                                        },
+                                    ],
+                                },
+                            },
                             { $count: "count" },
                         ],
-                        // 5. Financial Totals (Revenue collected via amountPaid & Outstanding balance)
+                        // 5. Financial Totals (revenue collected & outstanding balance)
                         financials: [
                             {
                                 $group: {
                                     _id: null,
-                                    totalRevenue: { $sum: "$amountPaid" },
+                                    totalRevenue: { $sum: REVENUE_EXPR },
                                     totalDueAmount: {
                                         $sum: {
-                                            $subtract: ["$grandTotal", "$amountPaid"],
+                                            $cond: [
+                                                { $in: ["$status", OPEN_STATUSES] },
+                                                { $subtract: ["$grandTotal", "$amountPaid"] },
+                                                0,
+                                            ],
                                         },
                                     },
                                 },
@@ -136,12 +165,15 @@ class DashboardRepository {
         }
 
         // Payment Status
-        if (paymentStatus) {
+        if (
+            typeof paymentStatus === "string" &&
+            Object.values(PAYMENT_STATUS).includes(paymentStatus)
+        ) {
             filter.status = paymentStatus;
         }
 
         // Customer Filter
-        if (customerId) {
+        if (customerId && mongoose.isValidObjectId(customerId)) {
             filter.customerId = new mongoose.Types.ObjectId(customerId);
         }
 
@@ -149,16 +181,20 @@ class DashboardRepository {
         if (startDate || endDate) {
             filter.createdAt = {};
 
-            if (startDate) {
+            if (startDate && !Number.isNaN(new Date(startDate).getTime())) {
                 const start = new Date(startDate);
                 start.setHours(0, 0, 0, 0);
                 filter.createdAt.$gte = start;
             }
 
-            if (endDate) {
+            if (endDate && !Number.isNaN(new Date(endDate).getTime())) {
                 const end = new Date(endDate);
                 end.setHours(23, 59, 59, 999);
                 filter.createdAt.$lte = end;
+            }
+
+            if (Object.keys(filter.createdAt).length === 0) {
+                delete filter.createdAt;
             }
         }
 
@@ -184,7 +220,8 @@ class DashboardRepository {
         };
     }
 
-    // Revenue Chart Analytics Aggregation
+    // Revenue Chart Analytics Aggregation (monthly, last 12 months with revenue)
+    // Shape consumed by the frontend: { _id: { year, month }, totalRevenue, totalInvoices }
     async getRevenueChart(userId) {
         const objectUserId = new mongoose.Types.ObjectId(userId);
 
@@ -192,23 +229,23 @@ class DashboardRepository {
             {
                 $match: {
                     userId: objectUserId,
+                    status: { $in: [PAYMENT_STATUS.PAID, PAYMENT_STATUS.PARTIALLY_PAID] },
                 },
             },
             {
                 $group: {
                     _id: {
-                        $dateToString: { format: "%Y-%m-%d", date: "$createdAt" },
+                        year: { $year: "$createdAt" },
+                        month: { $month: "$createdAt" },
                     },
-                    revenue: { $sum: "$amountPaid" },
-                    count: { $sum: 1 },
+                    totalRevenue: { $sum: REVENUE_EXPR },
+                    totalInvoices: { $sum: 1 },
                 },
             },
-            {
-                $sort: { _id: 1 },
-            },
-            {
-                $limit: 30,
-            },
+            // newest 12 months, then back to chronological order
+            { $sort: { "_id.year": -1, "_id.month": -1 } },
+            { $limit: 12 },
+            { $sort: { "_id.year": 1, "_id.month": 1 } },
         ]);
 
         return revenueData;
@@ -223,34 +260,44 @@ class DashboardRepository {
             {
                 $group: {
                     _id: "$status",
-                    count: { $sum: 1 },
+                    totalInvoices: { $sum: 1 },
                     totalAmount: { $sum: "$grandTotal" },
                 },
             },
         ]);
 
-        return statusData;
+        // `count` kept as an alias for existing API consumers
+        return statusData.map((row) => ({ ...row, count: row.totalInvoices }));
     }
 
-    // Top Customers Analytics
+    // Top Customers Analytics (grouped by the customerId stored on each invoice)
     async getTopCustomers(userId) {
         const objectUserId = new mongoose.Types.ObjectId(userId);
 
         const topCustomers = await Invoice.aggregate([
-            { $match: { userId: objectUserId } },
+            {
+                $match: {
+                    userId: objectUserId,
+                    customerId: { $ne: null },
+                    status: { $nin: [PAYMENT_STATUS.CANCELLED, PAYMENT_STATUS.DRAFT] },
+                },
+            },
+            { $sort: { createdAt: -1 } },
             {
                 $group: {
                     _id: "$customerId",
                     customerName: { $first: "$customer.customerName" },
+                    customerEmail: { $first: "$customer.email" },
                     totalInvoices: { $sum: 1 },
-                    totalSpent: { $sum: "$grandTotal" },
+                    totalRevenue: { $sum: "$grandTotal" },
                 },
             },
-            { $sort: { totalSpent: -1 } },
+            { $sort: { totalRevenue: -1 } },
             { $limit: 5 },
         ]);
 
-        return topCustomers;
+        // `totalSpent` kept as an alias for existing API consumers
+        return topCustomers.map((row) => ({ ...row, totalSpent: row.totalRevenue }));
     }
 
     // Top Products Analytics
@@ -258,21 +305,27 @@ class DashboardRepository {
         const objectUserId = new mongoose.Types.ObjectId(userId);
 
         const topProducts = await Invoice.aggregate([
-            { $match: { userId: objectUserId } },
+            {
+                $match: {
+                    userId: objectUserId,
+                    status: { $nin: [PAYMENT_STATUS.CANCELLED, PAYMENT_STATUS.DRAFT] },
+                },
+            },
             { $unwind: "$items" },
             {
                 $group: {
                     _id: "$items.productId",
-                    productName: { $first: "$items.name" },
-                    totalSold: { $sum: "$items.quantity" },
-                    totalRevenue: { $sum: "$items.total" },
+                    productName: { $first: "$items.productName" },
+                    totalQuantitySold: { $sum: "$items.quantity" },
+                    totalRevenue: { $sum: "$items.lineTotal" },
                 },
             },
-            { $sort: { totalSold: -1 } },
+            { $sort: { totalQuantitySold: -1 } },
             { $limit: 5 },
         ]);
 
-        return topProducts;
+        // `totalSold` kept as an alias for existing API consumers
+        return topProducts.map((row) => ({ ...row, totalSold: row.totalQuantitySold }));
     }
 
     // Recent Invoices List

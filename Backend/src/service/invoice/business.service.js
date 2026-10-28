@@ -5,10 +5,36 @@ import redis from "../../config/redis.js";
 import logger from "../../utils/logger.js";
 import translate from "../../utils/translate.js";
 
+const CREATE_FIELDS = [
+    "businessName",
+    "ownerName",
+    "email",
+    "phone",
+    "gstNumber",
+    "address",
+    "currency",
+    "logo",
+    "signature",
+    "invoicePrefix",
+    "invoiceStartNumber",
+    "termsAndConditions",
+];
+
+// Copies only whitelisted fields (prevents mass assignment of userId, nextInvoiceNumber...)
+const pick = (source = {}, allowed) => {
+    const result = {};
+    for (const key of allowed) {
+        if (source[key] !== undefined) {
+            result[key] = source[key];
+        }
+    }
+    return result;
+};
+
 export const createBusinessService = async ({ businessData, userId, language = "en" }) => {
     const cacheKey = `business:${userId}`;
 
-    // Check business exists in DB or cache
+    // Check business exists in DB
     const existedBusiness = await businessRepository.existsByUserId(userId);
 
     if (existedBusiness) {
@@ -17,10 +43,11 @@ export const createBusinessService = async ({ businessData, userId, language = "
         throw new ApiError(409, translate("BUSINESS.BUSINESS_ALREADY_EXISTS", language));
     }
 
-    businessData.userId = userId;
-
     // Store businessData in DB
-    const BusinessProfile = await businessRepository.create(businessData);
+    const BusinessProfile = await businessRepository.create({
+        ...pick(businessData, CREATE_FIELDS),
+        userId,
+    });
 
     if (!BusinessProfile) {
         logger.error(`Business profile creation failed: ${userId}`);
@@ -64,49 +91,36 @@ export const getBusinessProfileService = async (userId, language = "en") => {
     return businessProfile;
 };
 
-export const updateBusinessProfileService = async (
-    businessId,
-    userId,
-    rawUpdateData,
-    language = "en"
-) => {
-    const allowedUpdates = [
-        "businessName",
-        "email",
-        "phone",
-        "address",
-        "gstNumber",
-        "panNumber",
-        "bankDetails",
-        "logo",
-    ];
+export const updateBusinessProfileService = async (userId, rawUpdateData, language = "en") => {
+    const updateData = pick(rawUpdateData, CREATE_FIELDS);
 
-    const updateData = {};
-    for (const key of allowedUpdates) {
-        if (rawUpdateData[key] !== undefined) {
-            updateData[key] = rawUpdateData[key];
-        }
-    }
-
-    const business = await businessRepository.findByIdAndUserId(businessId, userId);
+    const business = await businessRepository.findByUserId(userId);
 
     if (!business) {
-        logger.warn(`Business update attempted for non-existing business: ${businessId}`);
+        logger.warn(`Business update attempted for non-existing business of user: ${userId}`);
         throw new ApiError(404, translate("BUSINESS.BUSINESS_NOT_FOUND", language));
     }
 
-    const updatedBusiness = await businessRepository.updateByIdAndUserId(
-        businessId,
-        userId,
-        updateData
-    );
+    // Raising the start number must also move the invoice counter forward, otherwise the new
+    // value would never be used. The counter never moves backwards (no duplicate numbers).
+    if (
+        updateData.invoiceStartNumber !== undefined &&
+        Number(updateData.invoiceStartNumber) > (business.nextInvoiceNumber || 0)
+    ) {
+        updateData.nextInvoiceNumber = Number(updateData.invoiceStartNumber);
+    }
+
+    const updatedBusiness = await businessRepository.updateByUserId(userId, updateData);
 
     if (!updatedBusiness) {
-        logger.error(`Business update failed: ${businessId}`);
+        logger.error(`Business update failed: ${userId}`);
         throw new ApiError(500, translate("BUSINESS.BUSINESS_UPDATE_FAILED", language));
     }
 
-    logger.info(`Business updated successfully: ${businessId}`);
+    // The cached copy is now stale
+    await redis.del(`business:${userId}`);
+
+    logger.info(`Business updated successfully: ${userId}`);
     return updatedBusiness;
 };
 
