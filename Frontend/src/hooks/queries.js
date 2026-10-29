@@ -28,7 +28,9 @@ function crud(api, listKey, itemKey) {
       return useMutation({
         mutationFn: (v) => api.create(v),
         onSuccess: (item) => {
-          qc.setQueryData(listKey(), (old = []) => [item, ...old])
+          // Only prepend when the list is already cached; otherwise the cache would hold just this one row.
+          qc.setQueryData(listKey(), (old) => (old ? [item, ...old] : old))
+          qc.invalidateQueries({ queryKey: listKey() })
           invalidate(qc)
         },
       })

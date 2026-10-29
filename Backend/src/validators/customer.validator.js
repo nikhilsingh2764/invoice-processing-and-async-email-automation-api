@@ -142,13 +142,13 @@ export const updateCustomerValidator = [
         .withMessage("Phone number must contain exactly 10 digits"),
 
     body("companyName")
-        .optional()
+        .optional({ nullable: true })
         .trim()
         .isLength({ min: 3, max: 100 })
         .withMessage("Company name must be between 3 and 100 characters"),
 
     body("gstNumber")
-        .optional()
+        .optional({ nullable: true })
         .trim()
         .matches(/^[0-9A-Za-z]{15}$/)
         .withMessage("GST number must contain exactly 15 characters"),
@@ -160,7 +160,7 @@ export const updateCustomerValidator = [
         .withMessage("Invalid customer type"),
 
     body("notes")
-        .optional()
+        .optional({ nullable: true })
         .trim()
         .isLength({ max: 500 })
         .withMessage("Notes cannot exceed 500 characters"),

@@ -132,6 +132,8 @@ export const updateProductService = async (productId, userId, rawUpdateData, lan
         throw new ApiError(500, translate("PRODUCT.PRODUCT_UPDATE_FAILED", language));
     }
 
+    await invalidateDashboardCache(userId);
+
     logger.info(`Product updated successfully: ${productId}`);
     return updatedProduct;
 };

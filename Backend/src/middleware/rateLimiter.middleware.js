@@ -1,11 +1,12 @@
 import { rateLimit, ipKeyGenerator } from "express-rate-limit";
 import { RedisStore } from "rate-limit-redis"; //store rate limit data inside redis instead of node memory
 import redis from "../config/redis.js"; //redis client connection
+import withTimeout from "../utils/withTimeout.js";
 
 // reusable Redis Store
 const createStore = (prefix) =>
     new RedisStore({
-        sendCommand: (...args) => redis.call(...args), // express-rate-limit uses this function to communicate with Redis
+        sendCommand: (...args) => withTimeout(redis.call(...args), 2000, "Rate limit store"), // express-rate-limit uses this function to communicate with Redis
         prefix, //keeps different limiters like login signup separeated in redis
     });
 
@@ -156,6 +157,7 @@ export const businessLimiter = rateLimit({
     store: createStore("business:"),
     windowMs: 15 * 60 * 1000,
     max: 100,
+    passOnStoreError: true,
     standardHeaders: true,
     legacyHeaders: false,
     message: {
@@ -172,6 +174,7 @@ export const ProductLimiter = rateLimit({
     store: createStore("product:"),
     windowMs: 15 * 60 * 1000,
     max: 100,
+    passOnStoreError: true,
     standardHeaders: true,
     legacyHeaders: false,
     message: {
@@ -188,6 +191,7 @@ export const CustomerLimiter = rateLimit({
     store: createStore("customer:"),
     windowMs: 15 * 60 * 1000,
     max: 100,
+    passOnStoreError: true,
     standardHeaders: true,
     legacyHeaders: false,
     message: {
@@ -208,6 +212,7 @@ export const invoiceCreateLimiter = rateLimit({
     store: createStore("invoice:create"),
     windowMs: 15 * 60 * 1000,
     max: 30,
+    passOnStoreError: true,
     standardHeaders: true,
     legacyHeaders: false,
     message: rateLimitMessage,
@@ -217,6 +222,7 @@ export const invoiceReadLimiter = rateLimit({
     store: createStore("invoice:read:"),
     windowMs: 15 * 60 * 1000,
     max: 300,
+    passOnStoreError: true,
     standardHeaders: true,
     legacyHeaders: false,
     message: rateLimitMessage,
@@ -226,6 +232,7 @@ export const invoiceUpdateLimiter = rateLimit({
     store: createStore("invoice:update:"),
     windowMs: 15 * 60 * 1000,
     max: 100,
+    passOnStoreError: true,
     standardHeaders: true,
     legacyHeaders: false,
     message: rateLimitMessage,
@@ -235,6 +242,7 @@ export const invoiceDeleteLimiter = rateLimit({
     store: createStore("invoice:delete:"),
     windowMs: 15 * 60 * 1000,
     max: 20,
+    passOnStoreError: true,
     standardHeaders: true,
     legacyHeaders: false,
     message: rateLimitMessage,
@@ -244,6 +252,7 @@ export const invoiceEmailLimiter = rateLimit({
     store: createStore("invoice:email:"),
     windowMs: 60 * 60 * 1000,
     max: 15,
+    passOnStoreError: true,
     standardHeaders: true,
     legacyHeaders: false,
     message: rateLimitMessage,
@@ -253,6 +262,7 @@ export const invoicePdfLimiter = rateLimit({
     store: createStore("invoice:pdf:"),
     windowMs: 60 * 60 * 1000,
     max: 15,
+    passOnStoreError: true,
     standardHeaders: true,
     legacyHeaders: false,
     message: rateLimitMessage,
@@ -262,6 +272,7 @@ export const invoiceDuplicateLimiter = rateLimit({
     store: createStore("invoice:duplicate:"),
     windowMs: 15 * 60 * 1000,
     max: 15,
+    passOnStoreError: true,
     standardHeaders: true,
     legacyHeaders: false,
     message: rateLimitMessage,

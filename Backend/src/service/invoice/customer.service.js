@@ -136,6 +136,8 @@ export const updateCustomerService = async (customerId, userId, rawUpdateData, l
         throw new ApiError(500, translate("CUSTOMER.CUSTOMER_UPDATE_FAILED", language));
     }
 
+    await invalidateDashboardCache(userId);
+
     logger.info(`Customer updated successfully: ${customerId}`);
 
     return updatedCustomer;

@@ -49,10 +49,11 @@ export function buildCustomer(v, { update = false } = {}) {
     customerName: str(v.customerName),
     email: email(v.email),
     phone: str(v.phone),
-    companyName: opt(v.companyName),
-    gstNumber: opt(v.gstNumber),
+    // On update an emptied optional field is sent as null so the server clears it (undefined would keep the old value).
+    companyName: opt(v.companyName) ?? (update ? null : undefined),
+    gstNumber: opt(v.gstNumber) ?? (update ? null : undefined),
     customerType: v.customerType,
-    notes: opt(v.notes),
+    notes: opt(v.notes) ?? (update ? null : undefined),
     billingAddress: address(v.billingAddress),
     // On update, "same as billing" clears a previously saved shipping address (the server accepts null).
     shippingAddress: same || !v.shippingAddress ? (update ? null : undefined) : address(v.shippingAddress),

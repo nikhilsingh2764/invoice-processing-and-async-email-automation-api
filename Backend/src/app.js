@@ -64,8 +64,6 @@ app.use(middleware.handle(i18next));
 
 app.use(cookieParser());
 
-app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
-
 app.use(csrfProtectionMiddleware);
 
 app.use(requestLogger);
@@ -92,7 +90,14 @@ app.use("/api/v1", healthRouter);
 
 app.use("/api/v1", metricsRouter);
 
+app.get("/health", (req, res) => {
+    res.status(200).json({
+        success: true,
+        message: "API is healthy",
+    });
+});
 
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // Unknown routes -> JSON 404 (instead of Express' default HTML page)
 app.use((req, res, next) => {

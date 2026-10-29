@@ -139,11 +139,15 @@ export const customerSchema = z
     notes: optionalText(500, 'Keep notes within 500 characters'),
     billingAddress: addressSchema,
     shippingSame: z.boolean().default(true),
-    shippingAddress: addressSchema.optional(),
+    // Validated below, and only when shipping differs from billing (the hidden blank fields must not block submit).
+    shippingAddress: z.any().optional(),
   })
   .superRefine((v, ctx) => {
-    if (!v.shippingSame && !v.shippingAddress) ctx.addIssue({ code: 'custom', path: ['shippingAddress', 'addressLine1'], message: 'Enter the shipping address' })
+    if (v.shippingSame) return
+    const parsed = addressSchema.safeParse(v.shippingAddress ?? {})
+    if (!parsed.success) for (const issue of parsed.error.issues) ctx.addIssue({ code: 'custom', path: ['shippingAddress', ...issue.path], message: issue.message })
   })
+  .transform((v) => (v.shippingSame ? { ...v, shippingAddress: undefined } : { ...v, shippingAddress: addressSchema.parse(v.shippingAddress) }))
 
 export const productSchema = z.object({
   productName: trimmed('Enter the product name').min(3, 'Use 3 to 100 characters').max(100, 'Use 3 to 100 characters'),

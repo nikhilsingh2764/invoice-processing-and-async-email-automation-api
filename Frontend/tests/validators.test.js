@@ -50,6 +50,12 @@ describe('business, customer, product', () => {
     expect(customerSchema.safeParse({ ...customer, shippingSame: false }).success).toBe(false)
     expect(customerSchema.safeParse({ ...customer, shippingSame: false, shippingAddress: address }).success).toBe(true)
   })
+  it('customer: hidden blank shipping fields do not block submit when same as billing', () => {
+    const blank = { addressLine1: '', addressLine2: '', city: '', state: '', country: 'India', postalCode: '' }
+    const r = customerSchema.safeParse({ ...customer, shippingSame: true, shippingAddress: blank })
+    expect(r.success).toBe(true)
+    expect(r.data.shippingAddress).toBeUndefined()
+  })
   it('product: price, tax and discount ranges', () => {
     const p = { productName: 'Logo design', description: 'd', category: 'Design', unit: 'service', price: '100', taxRate: '18', discount: '' }
     expect(productSchema.parse(p).discount).toBe(0)
