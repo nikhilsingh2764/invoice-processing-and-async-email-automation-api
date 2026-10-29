@@ -63,7 +63,11 @@ class BusinessRepository {
                     },
                 },
             ],
-            { returnDocument: "after", session }
+            { 
+                updatePipeline: true,
+                returnDocument: "after", 
+                session 
+            }
         );
     }
 }
