@@ -15,10 +15,10 @@
 </p>
 
 <p>
-  <a href="https://invoice-backend-drqr.onrender.com/api/v1/health">Live API</a> ·
-  <a href="https://invoice-backend-drqr.onrender.com/api-docs">Swagger Docs</a> ·
-  <a href="https://invoicepilot-zeta.vercel.app">Frontend Demo</a> ·
-  <a href="https://www.postman.com/technical-physicist-35686083-s-team/workspace/invoice-generator-api/collection/39798617-83cff721-5ce7-4e00-ba58-0d49017d3f39?action=share&creator=39798617">Postman Collection</a>
+  <a href="https://backend-api-lbvm.onrender.com/api/v1/health">Live API</a> ·
+  <a href="https://backend-api-lbvm.onrender.com/api-docs">Swagger Docs</a> ·
+  <a href="https://invoiceid.vercel.app">Frontend Demo</a> ·
+  <a href="https://documenter.getpostman.com/view/39798617/2sBYHPz25c">Postman Collection</a>
 </p>
 
 </div>
