@@ -15,6 +15,10 @@ export function Modal({ open, onClose, size = 'md', children, dismissible = true
   const titleId = useId()
   const descId = useId()
   const opener = useRef(null)
+  // Keep the latest onClose in a ref: callers pass a new function every render, and listing it as an effect
+  // dependency re-ran the effect (moving focus back to the first field) whenever the parent re-rendered.
+  const closeRef = useRef(onClose)
+  closeRef.current = onClose
 
   useEffect(() => {
     if (!open) return undefined
@@ -27,7 +31,7 @@ export function Modal({ open, onClose, size = 'md', children, dismissible = true
     const onKey = (e) => {
       if (e.key === 'Escape' && dismissible) {
         e.stopPropagation()
-        onClose?.()
+        closeRef.current?.()
         return
       }
       if (e.key !== 'Tab' || !node) return
@@ -54,7 +58,7 @@ export function Modal({ open, onClose, size = 'md', children, dismissible = true
       const el = opener.current
       if (el && typeof el.focus === 'function' && document.contains(el)) el.focus()
     }
-  }, [open, onClose, dismissible, initialFocus])
+  }, [open, dismissible, initialFocus])
 
   if (!open) return null
   return createPortal(

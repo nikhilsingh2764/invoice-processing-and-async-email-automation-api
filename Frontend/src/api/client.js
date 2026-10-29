@@ -63,7 +63,28 @@ export function createClient({ baseURL = API_BASE_URL, csrf = SEND_CSRF_HEADER, 
   }
 
   instance.interceptors.response.use(
-    (response) => response,
+    (response) => {
+      // A 200 that carries a web page (the SPA's index.html) means /api is not reaching the backend: a missing proxy
+      // rule or wrong VITE_API_BASE_URL. Without this check every list silently parses to "empty" and the dashboard shows zeros.
+      if (typeof response.data === 'string' && /^\s*<(!doctype|html)/i.test(response.data)) {
+        const error = new Error('API returned a web page instead of JSON')
+        error.config = response.config
+        error.response = response
+        error.normalized = {
+          status: 502,
+          message: 'Cannot reach the API: the server answered with a web page instead of data. Check the API proxy rule or VITE_API_BASE_URL.',
+          serverMessage: '',
+          detail: '',
+          fieldErrors: {},
+          isNetwork: true,
+          isTimeout: false,
+          isRateLimit: false,
+          isCanceled: false,
+        }
+        throw error
+      }
+      return response
+    },
     async (error) => {
       const config = error.config
       if (error.response && isBinary(error.response.data)) error.response.data = await decodeBody(error.response.data)

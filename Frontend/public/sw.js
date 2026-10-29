@@ -1,5 +1,5 @@
 // Minimal service worker. It caches the static app shell only. API traffic and anything with credentials is NEVER cached.
-const VERSION = 'ip-v1'
+const VERSION = 'ip-v2'
 const SHELL = ['/offline.html', '/offline.css', '/favicon.svg', '/manifest.webmanifest']
 
 self.addEventListener('install', (event) => {
@@ -29,7 +29,12 @@ self.addEventListener('fetch', (event) => {
     // Hashed build assets are immutable, so cache-first is safe.
     event.respondWith(
       caches.match(request).then((hit) => hit || fetch(request).then((res) => {
-        if (res.ok) caches.open(VERSION).then((cache) => cache.put(request, res.clone()))
+        // Clone synchronously: once `res` is returned to the page its body is consumed, and a clone made later throws
+        // "Response body is already used".
+        if (res.ok) {
+          const copy = res.clone()
+          caches.open(VERSION).then((cache) => cache.put(request, copy)).catch(() => {})
+        }
         return res
       })),
     )

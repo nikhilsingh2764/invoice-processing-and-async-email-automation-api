@@ -111,3 +111,11 @@ describe('axios client: request hygiene', () => {
     expect(client.defaults.withCredentials).toBe(true)
   })
 })
+
+describe('axios client: misrouted API', () => {
+  it('rejects a 200 HTML page instead of letting it parse as empty data', async () => {
+    const { adapter } = fakeAdapter({ 'GET /dashboard': (c) => json(c, 200, '<!doctype html><html><body>app</body></html>') })
+    const client = createClient({ baseURL: '/api/v1', adapter })
+    await expect(client.get('/dashboard')).rejects.toMatchObject({ normalized: { status: 502 } })
+  })
+})

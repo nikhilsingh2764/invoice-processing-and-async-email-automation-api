@@ -90,14 +90,14 @@ export function PolicyNotice() {
   )
 }
 
-/** B5: the server caches dashboard data for up to ten minutes. */
+/** B5: the server caches dashboard data for up to a minute. */
 export function CacheNotice() {
   const [hidden, setHidden] = useState(() => storage.get('ip.notice.cache') === 'hidden')
   const [session, setSession] = useState(false)
   if (hidden || session) return null
   return (
     <div className="banner" data-tone="info" role="note">
-      <span className="banner-grow">Dashboard totals can take up to 10 minutes to update after a change. Invoice pages are always current.</span>
+      <span className="banner-grow">Dashboard totals can take up to a minute to update after a change. Invoice pages are always current.</span>
       <Button size="sm" variant="ghost" onClick={() => setSession(true)}>Dismiss</Button>
       <Button
         size="sm"
