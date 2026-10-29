@@ -76,6 +76,7 @@ export function adaptInvoice(raw) {
   return {
     id: id(r),
     invoiceNumber: text(r.invoiceNumber),
+    customerId: text(r.customerId),
     business: { businessName: text(biz.businessName), ownerName: text(biz.ownerName), email: text(biz.email), phone: text(biz.phone), gstNumber: text(biz.gstNumber), logo: text(biz.logo), signature: text(biz.signature), currency: text(biz.currency || 'INR'), address: adaptAddress(biz.address) },
     customer: {
       customerName: text(cust.customerName),
@@ -92,6 +93,7 @@ export function adaptInvoice(raw) {
     totalTax: num(r.totalTax),
     totalDiscount: num(r.totalDiscount),
     grandTotal: num(r.grandTotal ?? r.totalAmount),
+    amountPaid: num(r.amountPaid),
     invoiceDate: r.invoiceDate || r.createdAt || null,
     dueDate: r.dueDate || null,
     status: INVOICE_STATUSES.includes(status) ? status : 'Pending',

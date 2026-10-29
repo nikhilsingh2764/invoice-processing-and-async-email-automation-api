@@ -43,7 +43,7 @@ export function buildBusiness(v) {
   })
 }
 
-export function buildCustomer(v) {
+export function buildCustomer(v, { update = false } = {}) {
   const same = v.shippingSame !== false
   return compact({
     customerName: str(v.customerName),
@@ -54,7 +54,8 @@ export function buildCustomer(v) {
     customerType: v.customerType,
     notes: opt(v.notes),
     billingAddress: address(v.billingAddress),
-    shippingAddress: same || !v.shippingAddress ? undefined : address(v.shippingAddress),
+    // On update, "same as billing" clears a previously saved shipping address (the server accepts null).
+    shippingAddress: same || !v.shippingAddress ? (update ? null : undefined) : address(v.shippingAddress),
   })
 }
 

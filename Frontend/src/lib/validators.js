@@ -97,6 +97,12 @@ const numberInRange = (min, max, message, fallback) =>
     z.number({ required_error: message, invalid_type_error: message }).min(min, message).max(max, message),
   )
 
+// The server accepts decimal quantities (0.5 kg, 1.5 hours) from 0.01 upwards.
+const quantityField = z.preprocess(
+  (v) => (v === '' || v === null || v === undefined ? undefined : Number(v)),
+  z.number({ required_error: 'Enter a quantity', invalid_type_error: 'Enter a quantity' }).min(0.01, 'Quantity must be at least 0.01').max(1000000, 'Quantity is too large'),
+)
+
 export const businessSchema = z.object({
   businessName: trimmed('Enter the business name').min(3, 'Use 3 to 100 characters').max(100, 'Use 3 to 100 characters'),
   ownerName: trimmed('Enter the owner name').min(3, 'Use 3 to 100 characters').max(100, 'Use 3 to 100 characters'),
@@ -156,7 +162,7 @@ export const invoiceSchema = z
   .object({
     customerId: trimmed('Choose a customer').min(1, 'Choose a customer'),
     items: z
-      .array(z.object({ productId: trimmed('Choose a product').min(1, 'Choose a product'), quantity: intFromInput(1, 'Enter a whole quantity, 1 or more') }))
+      .array(z.object({ productId: trimmed('Choose a product').min(1, 'Choose a product'), quantity: quantityField }))
       .min(1, 'Add at least one item'),
     dueDate: trimmed('Choose a due date').min(1, 'Choose a due date'),
     status: z.enum(INVOICE_STATUSES).default('Pending'),

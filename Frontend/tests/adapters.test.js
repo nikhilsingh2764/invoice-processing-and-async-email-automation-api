@@ -68,9 +68,9 @@ describe('payload builders whitelist fields', () => {
 })
 
 describe('dashboardParams', () => {
-  it('escapes the search term and whitelists the sort field', () => {
+  it('sends the search as typed (the server escapes it) and whitelists the sort field', () => {
     const p = dashboardParams({ q: 'a.b(', sort: 'password', status: 'Paid', page: 2 })
-    expect(p.search).toBe('a\\.b\\(')
+    expect(p.search).toBe('a.b(')
     expect(p.sortBy).toBe('createdAt')
     expect(p.paymentStatus).toBe('Paid')
   })

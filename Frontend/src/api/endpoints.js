@@ -8,6 +8,18 @@ export { dashboardParams }
 const opts = (signal) => (signal ? { signal } : undefined)
 const enc = encodeURIComponent
 
+/** The server pages customer/product lists (default 10, max 100). Walk every page so lists, selects and search see all rows. */
+async function fetchAll(path, adapt, signal) {
+  const rows = []
+  for (let page = 1; page <= 50; page += 1) {
+    const res = await http.get(path, { params: { page, limit: 100 }, ...opts(signal) })
+    const data = res?.data?.data
+    rows.push(...(Array.isArray(data) ? data : []).map(adapt))
+    if (!res?.data?.pagination?.hasNextPage) break
+  }
+  return rows
+}
+
 export const authApi = {
   signup: async (v) => unwrap(await http.post('/signup', buildSignup(v))),
   verifyOtp: async (v) => unwrap(await http.post('/verify-otp', buildVerifyOtp(v))),
@@ -39,20 +51,14 @@ export const businessApi = {
 }
 
 export const customerApi = {
-  list: async ({ signal } = {}) => {
-    const data = unwrap(await http.get('/customer', opts(signal)))
-    return (Array.isArray(data) ? data : []).map(adaptCustomer)
-  },
+  list: async ({ signal } = {}) => fetchAll('/customer', adaptCustomer, signal),
   create: async (v) => adaptCustomer(unwrap(await http.post('/customer', buildCustomer(v)))),
-  update: async (id, v) => adaptCustomer(unwrap(await http.patch(`/customer/${enc(id)}`, buildCustomer(v)))),
+  update: async (id, v) => adaptCustomer(unwrap(await http.patch(`/customer/${enc(id)}`, buildCustomer(v, { update: true })))),
   remove: async (id) => unwrap(await http.delete(`/customer/${enc(id)}`)),
 }
 
 export const productApi = {
-  list: async ({ signal } = {}) => {
-    const data = unwrap(await http.get('/product', opts(signal)))
-    return (Array.isArray(data) ? data : []).map(adaptProduct)
-  },
+  list: async ({ signal } = {}) => fetchAll('/product', adaptProduct, signal),
   create: async (v) => adaptProduct(unwrap(await http.post('/product', buildProduct(v)))),
   update: async (id, v) => adaptProduct(unwrap(await http.patch(`/product/${enc(id)}`, buildProduct(v)))),
   remove: async (id) => unwrap(await http.delete(`/product/${enc(id)}`)),

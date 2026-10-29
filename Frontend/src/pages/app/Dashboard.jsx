@@ -108,22 +108,22 @@ export default function Dashboard() {
 
       <Sheet fold aria-label="Summary">
         <MetaStrip label="Summary">
-          <MetaCell label="Paid revenue"><CountMoney value={s.totalRevenue} currency={currency} /></MetaCell>
-          <MetaCell label="Pending" hint="Pending status only"><CountMoney value={s.totalDueAmount} currency={currency} /></MetaCell>
-          <MetaCell label="Overdue" hint="Pending and past due date" value={formatNumber(s.overdueInvoices)} />
+          <MetaCell label="Revenue collected" hint="Paid invoices plus part-payments"><CountMoney value={s.totalRevenue} currency={currency} /></MetaCell>
+          <MetaCell label="Outstanding" hint="Still to be collected"><CountMoney value={s.totalDueAmount} currency={currency} /></MetaCell>
+          <MetaCell label="Overdue" hint="Marked overdue or past due date" value={formatNumber(s.overdueInvoices)} />
           <MetaCell label="Invoices" value={formatNumber(s.totalInvoices)} hint={`${formatNumber(s.totalCustomers)} customers · ${formatNumber(s.totalProducts)} products`} />
         </MetaStrip>
       </Sheet>
 
       {!isNew && (
-        <div style={{ display: 'grid', gap: 'var(--space-4)', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 22rem), 1fr))' }}>
-          <section className="card" aria-labelledby="rev-h" style={{ gridColumn: 'span 2', minInlineSize: 0 }}>
-            <div className="card-header" style={{ flexWrap: 'wrap', gap: 12 }}>
+        <div className="dash-grid" data-wide="true">
+          <section className="card dash-wide" aria-labelledby="rev-h">
+            <div className="card-header card-header-wrap">
               <div>
                 <h2 className="card-title" id="rev-h">Revenue by month</h2>
-                <p className="card-desc">Grouped by the month each invoice was created. The range changes this chart only, not the totals.</p>
+                <p className="card-desc">Collected amount by the month each invoice was created. The range changes this chart only.</p>
               </div>
-              <div className="chips">
+              <div className="chart-controls">
                 <Tabs label="Date range" tabs={RANGES.map(({ id, label }) => ({ id, label }))} value={range} onChange={setRange} idPrefix="range" controls={false} />
                 <Button size="sm" iconOnly icon={chartType === 'area' ? BarChart3 : LineChart} aria-pressed={chartType === 'bar'} onClick={() => setChartType((t) => (t === 'area' ? 'bar' : 'area'))}>
                   {chartType === 'area' ? 'Show as bars' : 'Show as area'}
@@ -131,7 +131,7 @@ export default function Dashboard() {
               </div>
             </div>
             {months.length === 0 ? (
-              <EmptyState title="No revenue yet">Paid and pending invoices will appear here by month.</EmptyState>
+              <EmptyState title="No revenue yet">Paid and part-paid invoices appear here by month.</EmptyState>
             ) : (
               <>
                 <Suspense fallback={<ChartFallback />}>
@@ -151,8 +151,8 @@ export default function Dashboard() {
           </section>
 
           <section className="card" aria-labelledby="gauge-h">
-            <h2 className="card-title" id="gauge-h">Paid vs. pending</h2>
-            <p className="card-desc" title="Pending excludes partially paid and overdue-status invoices">Pending excludes partially paid and overdue-status invoices.</p>
+            <h2 className="card-title" id="gauge-h">Collected vs. outstanding</h2>
+            <p className="card-desc">Share of billed money you have already received.</p>
             <Gauge paid={s.totalRevenue} pending={s.totalDueAmount} currency={currency} />
             <span className="sr-only">Total billed {formatMoney(total, currency)}</span>
           </section>
@@ -167,7 +167,7 @@ export default function Dashboard() {
       )}
 
       {!isNew && (
-        <div style={{ display: 'grid', gap: 'var(--space-4)', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 22rem), 1fr))' }}>
+        <div className="dash-grid">
           <section className="card" aria-labelledby="donut-h">
             <h2 className="card-title" id="donut-h">Status mix</h2>
             {d.statusChart.length ? (
@@ -177,7 +177,7 @@ export default function Dashboard() {
                     <StatusDonut data={d.statusChart} animate={!reduced} />
                   </div>
                 </Suspense>
-                <ul className="chips" style={{ listStyle: 'none', padding: 0 }}>
+                <ul className="chips status-legend">
                   {d.statusChart.map((x) => <li key={x.status}><span className="badge" data-status={x.status}><span className="badge-dot" aria-hidden="true" />{x.status} {x.count}</span></li>)}
                 </ul>
               </>
@@ -190,10 +190,10 @@ export default function Dashboard() {
             {overdue.isLoading || pending.isLoading ? <LedgerSkeleton rows={3} /> : attention.length === 0 ? (
               <p className="muted">Nothing is overdue. Nice.</p>
             ) : (
-              <ul style={{ listStyle: 'none', padding: 0, display: 'grid', gap: 8 }}>
+              <ul className="attention-list">
                 {attention.map((i) => (
-                  <li key={i.id} style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', justifyContent: 'space-between' }}>
-                    <span>
+                  <li key={i.id} className="attention-item">
+                    <span className="attention-text">
                       <Link to={`/invoices/${i.id}`} style={{ fontWeight: 600 }}>{i.invoiceNumber}</Link>{' '}
                       <span className="muted">{i.customer.customerName} · due {formatDate(i.dueDate)}</span>
                       {i.status === 'Pending' && <span className="badge" data-tone="warning" title="Status is still Pending" style={{ marginInlineStart: 8 }}>Past due</span>}
@@ -214,7 +214,7 @@ export default function Dashboard() {
                 { key: 'revenue', header: 'Revenue', num: true, render: (c) => formatMoney(c.revenue, currency) },
               ]} />
             ) : d.topCustomersCollapsed ? (
-              <Alert tone="info">Top customers can’t be shown yet, because invoices don’t record which customer they belong to on the server. Your invoices are unaffected.</Alert>
+              <Alert tone="info">Top customers appear for invoices created or edited recently. Older invoices were saved without a customer link, so they are not counted here. Nothing is wrong with your data.</Alert>
             ) : <p className="muted">No paid invoices yet.</p>}
           </section>
 

@@ -23,7 +23,8 @@
   }
   .btn-label { display: inline-flex; align-items: center; gap: var(--space-2); }
   .btn[data-loading='true'] .btn-label { visibility: hidden; }
-  .btn-spinner { position: absolute; inset: 0; display: grid; place-items: center; }
+  /* Centered in the button: a fixed-size box with inset 0 + auto margins sits in the middle, not at the left edge. */
+  .btn-spinner { position: absolute; inset: 0; margin: auto; }
   .spinner { inline-size: 16px; block-size: 16px; border-radius: var(--r-full); border: 2px solid currentColor; border-inline-end-color: transparent; animation: spin 700ms linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
 

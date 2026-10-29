@@ -27,13 +27,14 @@ const emptyItem = { productId: '', quantity: 1 }
 
 function Stepper({ value, onChange, label, error }) {
   const n = Number(value) || 0
+  const round = (x) => Math.round(x * 100) / 100
   return (
     <div className="field">
-      <span className="label sr-only">{label}</span>
-      <div className="input-affix" style={{ inlineSize: 'auto', display: 'inline-flex', gap: 4 }}>
-        <Button size="sm" iconOnly icon={Minus} disabled={n <= 1} onClick={() => onChange(Math.max(1, n - 1))}>Decrease quantity</Button>
-        <input className="input" style={{ inlineSize: 64, textAlign: 'center' }} inputMode="numeric" aria-label={label} aria-invalid={error ? 'true' : undefined} value={value} onChange={(e) => onChange(e.target.value.replace(/\D/g, ''))} />
-        <Button size="sm" iconOnly icon={Plus} onClick={() => onChange(n + 1)}>Increase quantity</Button>
+      <span className="label">Quantity</span>
+      <div className="stepper">
+        <Button size="sm" iconOnly icon={Minus} disabled={n <= 1} onClick={() => onChange(round(Math.max(1, n - 1)))}>Decrease quantity</Button>
+        <input className="input stepper-input" inputMode="decimal" aria-label={label} aria-invalid={error ? 'true' : undefined} value={value} onChange={(e) => onChange(e.target.value.replace(/[^\d.]/g, '').replace(/(\..*)\./g, '$1'))} />
+        <Button size="sm" iconOnly icon={Plus} onClick={() => onChange(round(n + 1))}>Increase quantity</Button>
       </div>
       {error && <p className="field-error" role="alert">{error}</p>}
     </div>
@@ -66,10 +67,11 @@ export default function InvoiceForm() {
   const items = watch('items')
   const customerId = watch('customerId')
 
-  // Edit: invoices keep only a customer snapshot (B2), so match it back to the customer list by email.
-  const original = useMemo(() => {
+    const original = useMemo(() => {
     if (!editing || !invoice.data || !customers.data) return null
-    const match = customers.data.find((c) => c.email.toLowerCase() === invoice.data.customer.email.toLowerCase())
+    // Newer invoices store customerId; older ones only hold a snapshot, so fall back to matching by email.
+    const byId = invoice.data.customerId && customers.data.find((c) => c.id === invoice.data.customerId)
+    const match = byId || customers.data.find((c) => c.email.toLowerCase() === invoice.data.customer.email.toLowerCase())
     return { ...invoice.data, customerId: match?.id || '' }
   }, [editing, invoice.data, customers.data])
 
@@ -166,18 +168,18 @@ export default function InvoiceForm() {
               {fields.map((f, idx) => {
                 const line = totals.lines[idx]
                 return (
-                  <div key={f.id} className="card" style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fit, minmax(12rem, 1fr))', alignItems: 'end' }}>
+                  <div key={f.id} className="card item-row">
                     <Select label={`Product ${idx + 1}`} error={errors.items?.[idx]?.productId?.message} {...register(`items.${idx}.productId`)}>
                       <option value="">Choose a product</option>
                       {products.data.map((p) => <option key={p.id} value={p.id} disabled={items.some((it, k) => k !== idx && it.productId === p.id)}>{p.productName} · {formatMoney(p.price, currency)}</option>)}
                     </Select>
                     <Controller control={control} name={`items.${idx}.quantity`} render={({ field }) => <Stepper label={`Quantity for item ${idx + 1}`} value={field.value} onChange={field.onChange} error={errors.items?.[idx]?.quantity?.message} />} />
-                    <div className="tabular" aria-live="polite">
+                    <div className="tabular item-total" aria-live="polite">
                       <span className="muted" style={{ fontSize: 'var(--text-xs)' }}>Line total</span>
                       <div style={{ fontWeight: 600 }}>{formatMoney(line?.lineTotal ?? 0, currency)}</div>
                       {line && (line.discount > 0 || line.tax > 0) && <div className="muted" style={{ fontSize: 'var(--text-xs)' }}>{line.discount > 0 && `−${formatMoney(line.discount, currency)} discount `}{line.tax > 0 && `+${formatMoney(line.tax, currency)} tax`}</div>}
                     </div>
-                    <Button iconOnly icon={Trash2} variant="ghost" disabled={fields.length === 1} onClick={() => remove(idx)}>Remove item {idx + 1}</Button>
+                    <Button className="item-remove" iconOnly icon={Trash2} variant="ghost" disabled={fields.length === 1} onClick={() => remove(idx)}>Remove item {idx + 1}</Button>
                   </div>
                 )
               })}
@@ -207,8 +209,8 @@ export default function InvoiceForm() {
       </Sheet>
 
       <div className="save-bar">
-        <span className="tabular" style={{ fontWeight: 600 }}>Total {formatMoney(totals.grandTotal, currency)}</span>
-        <span className="cluster">
+        <span className="tabular save-total">Total {formatMoney(totals.grandTotal, currency)}</span>
+        <span className="save-actions">
           <Button onClick={() => navigate(-1)}>Cancel</Button>
           <Button type="submit" variant="primary" loading={isSubmitting || create.isPending || update.isPending} disabled={noCustomers || noProducts}>{editing ? 'Save changes' : 'Create invoice'}</Button>
         </span>

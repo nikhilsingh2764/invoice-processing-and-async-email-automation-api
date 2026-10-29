@@ -6,5 +6,6 @@
 @import './theme/base.css';
 @import './theme/components.css';
 @import './theme/patterns.css';
+@import './theme/layout.css';
 @import './theme/motion.css';
 @import './theme/print.css';

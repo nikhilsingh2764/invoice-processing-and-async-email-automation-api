@@ -22,7 +22,7 @@ export function Gauge({ paid, pending, currency }) {
         <text x="70" y="76" textAnchor="middle" fontSize="26" fontWeight="700" fill="var(--text)" fontFamily="var(--ff-heading)">{Math.round(pct * 100)}%</text>
       </svg>
       <figcaption className="muted" style={{ textAlign: 'center', fontSize: 'var(--text-sm)' }}>
-        {total > 0 ? `${formatMoney(paid, currency)} paid of ${formatMoney(total, currency)}` : 'Nothing billed yet'}
+        {total > 0 ? `${formatMoney(paid, currency)} collected of ${formatMoney(total, currency)}` : 'Nothing billed yet'}
       </figcaption>
     </figure>
   )
@@ -40,14 +40,14 @@ const FLOW = [
 /** Invoice flow: Draft -> Pending -> outcomes. Counts are real; amounts only where the API provides them. */
 export function InvoiceFlow({ counts, paidAmount, pendingAmount, currency }) {
   const count = (s) => counts.find((c) => c.status === s)?.count ?? 0
-  const amount = { Paid: paidAmount, Pending: pendingAmount }
+  const amount = { Paid: paidAmount }
   return (
-    <ol className="flow" aria-label="Invoice flow by status" style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gap: 'var(--space-3)', gridTemplateColumns: 'repeat(auto-fit, minmax(9.5rem, 1fr))' }}>
+    <ol className="flow" aria-label="Invoice flow by status">
       {FLOW.map((f, i) => (
         <li key={f.status} className="reveal" data-in="true" style={{ '--i': i }}>
-          <Link to={`/invoices?status=${encodeURIComponent(f.status)}`} className="card" style={{ display: 'grid', gap: 4, textDecoration: 'none', color: 'inherit', padding: 'var(--space-4)' }}>
+          <Link to={`/invoices?status=${encodeURIComponent(f.status)}`} className="card flow-card">
             <span className="badge" data-status={f.status}><span className="badge-dot" aria-hidden="true" />{f.status}</span>
-            <strong className="tabular" style={{ fontSize: 'var(--text-xl)', fontFamily: 'var(--ff-heading)' }}>{formatNumber(count(f.status))}</strong>
+            <strong className="tabular flow-count">{formatNumber(count(f.status))}</strong>
             {amount[f.status] != null && <span className="muted tabular" style={{ fontSize: 'var(--text-sm)' }}>{formatMoney(amount[f.status], currency)}</span>}
             <span className="muted" style={{ fontSize: 'var(--text-xs)', display: 'inline-flex', alignItems: 'center', gap: 4 }}>View <ArrowRight width={12} height={12} aria-hidden="true" /></span>
           </Link>

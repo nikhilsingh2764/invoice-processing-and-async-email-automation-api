@@ -55,6 +55,8 @@ export function ProductModal({ open, onClose, product, onSaved }) {
             <div className="form-grid">
               <Input label="Category" error={errors.category?.message} {...register('category')} />
               <Select label="Unit" error={errors.unit?.message} {...register('unit')}>{UNITS.map((u) => <option key={u}>{u}</option>)}</Select>
+            </div>
+            <div className="form-grid" data-cols="3">
               <Input label="Price" type="number" inputMode="decimal" step="0.01" min="0" error={errors.price?.message} {...register('price')} />
               <Input label="Tax rate (%)" type="number" inputMode="decimal" step="0.01" min="0" max="100" error={errors.taxRate?.message} {...register('taxRate')} />
               <Input label="Discount (%)" type="number" inputMode="decimal" step="0.01" min="0" max="100" error={errors.discount?.message} {...register('discount')} />

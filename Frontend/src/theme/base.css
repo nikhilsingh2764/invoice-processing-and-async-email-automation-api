@@ -101,7 +101,7 @@
   .hide-sm { display: none; }
   @media (min-width: 640px) { .hide-sm { display: inline-flex; } }
   .mobile-only { display: inline-flex; }
-  @media (min-width: 900px) { .mobile-only { display: none; } }
+  @media (min-width: 1024px) { .mobile-only { display: none; } }
   .stack { display: grid; gap: var(--space-4); }
   .stack-lg { display: grid; gap: var(--gap-section); }
   .cluster { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); }
