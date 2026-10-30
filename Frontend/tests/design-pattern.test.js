@@ -7,7 +7,11 @@ const read = (p) => readFileSync(new URL(`../src/${p}`, import.meta.url), 'utf8'
 describe('Invoice Document pattern', () => {
   it('detail page uses all six zones', () => {
     const page = read('pages/app/InvoiceDetail.jsx')
-    for (const piece of ['Letterhead', 'MetaStrip', 'Party', 'Ledger', 'Totals', 'Perforation', 'Stamp']) expect(page.includes(piece)).toBe(true)
+    const doc = read('components/invoice/InvoiceDoc.jsx')
+    expect(page.includes('Letterhead')).toBe(true)
+    expect(page.includes('InvoiceDoc')).toBe(true)
+    // letterhead/status, meta strip, parties, items table, totals, perforation + footer notes
+    for (const piece of ['doc-head', 'doc-status', 'doc-meta', 'doc-parties', 'doc-table', 'doc-totals', 'doc-perf', 'doc-foot']) expect(doc.includes(piece)).toBe(true)
   })
   it('every app page opens with a Letterhead (zone 1)', () => {
     for (const f of ['Dashboard', 'InvoiceList', 'InvoiceForm', 'InvoiceDetail', 'Customers', 'Products', 'Business', 'Account'].map((n) => `pages/app/${n}.jsx`)) {

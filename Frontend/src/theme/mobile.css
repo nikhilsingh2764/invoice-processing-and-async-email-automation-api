@@ -1,0 +1,160 @@
+/* Mobile-first refinements (Android 320-480px wide first) and the redesigned on-screen invoice ("doc").
+   Loaded last, so these rules win at equal specificity. Everything uses tokens, so light and dark both work. */
+@layer components {
+
+  /* ================= Global phone fixes ================= */
+  html { -webkit-tap-highlight-color: transparent; }
+  body { overflow-x: hidden; }
+  img, svg, video, canvas { max-inline-size: 100%; }
+  .page, .stack-lg, .stack, .dash-grid, .card, .sheet { min-inline-size: 0; }
+
+  @media (max-width: 639.98px) {
+    :root { --gutter: 14px; --topbar-h: 56px; --pad-card: 14px; --gap-section: 20px; --text-xl: 22px; }
+    .topbar { gap: 4px; padding-inline: 10px; padding-block-start: env(safe-area-inset-top); block-size: calc(var(--topbar-h) + env(safe-area-inset-top)); }
+    .topbar .btn[data-icon-only='true'] { min-inline-size: 40px; inline-size: 40px; min-block-size: 40px; }
+    .main-area { padding-block-start: var(--space-4); padding-block-end: calc(var(--bottom-nav-h) + var(--space-6) + env(safe-area-inset-bottom)); }
+    h1, .letterhead-title { font-size: clamp(1.4rem, 1.1rem + 2vw, 1.75rem); }
+
+    /* Bottom navigation: five equal slots, labels never wrap or overflow on 320px phones */
+    .bottom-nav { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+    .bottom-link { font-size: 10.5px; min-inline-size: 0; padding-inline: 2px; }
+    .bottom-link > svg { inline-size: 22px; block-size: 22px; }
+    .bottom-fab { inline-size: 48px; block-size: 48px; margin-block-end: 10px; }
+
+    /* Page header: breadcrumb small, actions become an even grid of big tap targets */
+    .letterhead { gap: var(--space-3); }
+    .breadcrumb { font-size: 12px; }
+    .letterhead-actions { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2); }
+    .letterhead-actions > .btn { inline-size: 100%; min-inline-size: 0; white-space: normal; text-align: center; padding-inline: var(--space-2); }
+    .letterhead-actions > .btn-primary:first-child { grid-column: 1 / -1; }
+    .letterhead-actions > :last-child:not(.btn) { grid-column: 1 / -1; justify-self: end; }
+
+    /* Cards, sheets, toasts */
+    .sheet-pad { padding: var(--space-3); }
+    .card { padding: var(--pad-card); border-radius: var(--r-md); }
+    .toast-region { inset-inline: 10px; }
+    .toast { inline-size: 100%; }
+    .menu { max-inline-size: calc(100vw - 20px); }
+
+    /* Filters, chips and tabs scroll sideways instead of overflowing */
+    .tabs, .chips[data-scroll='true'] { max-inline-size: 100%; overflow-x: auto; flex-wrap: nowrap; scrollbar-width: none; }
+    .pagination { gap: var(--space-2); }
+
+    /* Lists: each row is a tidy card */
+    .ledger tbody tr { padding: var(--space-3) 0; }
+    .ledger td.num { font-weight: 600; }
+
+    /* Forms */
+    .form-grid { gap: var(--space-3); }
+    .save-bar { padding-inline: var(--gutter); margin-inline: calc(var(--gutter) * -1); }
+    .item-row { padding: var(--space-3); }
+    .modal { max-block-size: 96dvh; border-start-start-radius: var(--r-xl); border-start-end-radius: var(--r-xl); }
+    .modal-body { padding-block: var(--space-4); }
+
+    /* Dashboard */
+    .flow { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2); }
+    .flow-card { padding: var(--space-3); }
+    .attention-item > .btn { inline-size: 100%; }
+  }
+  @media (max-width: 359.98px) {
+    :root { --gutter: 10px; }
+    .letterhead-actions { grid-template-columns: 1fr; }
+    .bottom-link { font-size: 10px; }
+  }
+
+  /* ================= Invoice screen ================= */
+  .inv-page { max-inline-size: 52rem; margin-inline: auto; inline-size: 100%; }
+
+  .doc {
+    --doc-pad: 16px;
+    position: relative; inline-size: 100%; margin-inline: auto; padding: var(--doc-pad);
+    background: var(--surface); color: var(--text);
+    border: 1px solid var(--hairline); border-radius: var(--r-lg);
+    box-shadow: var(--elev-2), var(--inset-edge);
+    display: grid; gap: 18px; min-inline-size: 0; overflow-wrap: anywhere;
+    font-variant-numeric: tabular-nums lining-nums;
+  }
+  @media (min-width: 480px) { .doc { --doc-pad: 22px; gap: 22px; } }
+  @media (min-width: 768px) { .doc { --doc-pad: 36px; gap: 28px; } }
+
+  .doc-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+  .doc-head-text { min-inline-size: 0; }
+  .doc-logo { max-block-size: 48px; max-inline-size: 140px; margin-block-end: 8px; }
+  .doc-biz { font-size: clamp(1.15rem, 1rem + 1vw, 1.6rem); line-height: 1.15; }
+  .doc-owner { margin-block-start: 2px; font-size: 13px; color: var(--brand-text); }
+  .doc-status { flex: none; display: inline-block; padding: 3px 9px; border-radius: 5px; border: 1.5px solid currentColor; background: var(--sb, transparent); color: var(--sf, var(--text)); font-family: var(--ff-heading); font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; line-height: 1.3; transform: rotate(-3deg); }
+  .doc-status[data-status='Paid'] { --sf: var(--st-paid); --sb: var(--st-paid-bg); }
+  .doc-status[data-status='Pending'] { --sf: var(--st-pending); --sb: var(--st-pending-bg); }
+  .doc-status[data-status='Overdue'] { --sf: var(--st-overdue); --sb: var(--st-overdue-bg); }
+  .doc-status[data-status='Partially Paid'] { --sf: var(--st-partial); --sb: var(--st-partial-bg); }
+  .doc-status[data-status='Draft'] { --sf: var(--st-draft); --sb: var(--st-draft-bg); }
+  .doc-status[data-status='Cancelled'] { --sf: var(--st-cancelled); --sb: var(--st-cancelled-bg); }
+  .doc-status[data-status='Sent'] { --sf: var(--info); --sb: var(--info-tint); }
+
+  /* Meta: 2x2 on phones, one row from 560px, with a hairline between cells */
+  .doc-meta { margin: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 12px; padding-block: 14px; border-block: 1px solid var(--hairline); }
+  .doc-meta > div { min-inline-size: 0; display: grid; gap: 3px; align-content: start; }
+  .doc-meta dt { font-size: 11px; color: var(--muted); }
+  .doc-meta dd { margin: 0; font-size: 15px; font-weight: 650; line-height: 1.2; }
+  .doc-meta dd small { display: block; margin-block-start: 2px; font-size: 11px; font-weight: 500; color: var(--danger); }
+  .doc-meta-total { color: var(--text); font-family: var(--ff-heading); font-size: 17px !important; }
+  @media (min-width: 560px) {
+    .doc-meta { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0; }
+    .doc-meta > div { padding-inline: 16px; border-inline-start: 1px solid var(--hairline); }
+    .doc-meta > div:first-child { padding-inline-start: 0; border-inline-start: 0; }
+    .doc-meta dd { font-size: 17px; }
+    .doc-meta-total { font-size: 20px !important; }
+  }
+
+  /* Parties: stacked on phones, side by side from 560px */
+  .doc-parties { display: grid; gap: 20px; }
+  @media (min-width: 400px) { .doc-parties { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; } .doc-party-lines { font-size: 12px; } .doc-party-name { font-size: 15px; } }
+  @media (min-width: 560px) { .doc-parties { gap: 28px; } .doc-party-lines { font-size: 13px; } .doc-party-name { font-size: 17px; } }
+  .doc-party { min-inline-size: 0; }
+  .doc-label { margin-block-end: 6px; font-family: var(--ff-body); font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); }
+  .doc-party-name { font-family: var(--ff-heading); font-size: 17px; font-weight: 650; line-height: 1.25; margin-block-end: 4px; }
+  .doc-party-lines { display: grid; gap: 2px; font-style: normal; font-size: 13px; line-height: 1.45; color: var(--brand-text); }
+  .doc-line { display: block; }
+
+  /* Items: a real table at every width */
+  .doc-table-wrap { margin-inline: calc(var(--doc-pad) * -1); padding-inline: var(--doc-pad); overflow-x: auto; overscroll-behavior-x: contain; }
+  .doc-table { inline-size: 100%; border-collapse: collapse; font-size: 13px; }
+  .doc-table th { padding: 8px 6px; border-block-end: 1px solid var(--hairline); font-size: 11px; font-weight: 500; color: var(--muted); text-align: start; white-space: nowrap; }
+  .doc-table td { padding: 12px 6px; border-block-end: 1px solid var(--hairline); vertical-align: top; }
+  .doc-table tbody tr:last-child td { border-block-end: 0; }
+  .doc-table .c-no { inline-size: 22px; color: var(--muted); padding-inline-start: 0; }
+  .doc-table .c-qty, .doc-table .c-price, .doc-table .c-tax, .doc-table .c-amt { text-align: end; white-space: nowrap; }
+  .doc-table .c-amt { padding-inline-end: 0; font-weight: 650; }
+  .doc-table th.c-amt { font-weight: 500; }
+  .doc-item-name { display: block; font-weight: 650; line-height: 1.3; }
+  .doc-item-desc { display: block; margin-block-start: 1px; font-size: 12px; color: var(--muted); }
+  .doc-item-sub { display: block; margin-block-start: 2px; font-size: 11.5px; color: var(--muted); }
+  /* Phones: hide Price and Tax columns and show them under the item name instead */
+  @media (max-width: 519.98px) { .doc-table .c-price, .doc-table .c-tax { display: none; } .doc-table .c-item { inline-size: 100%; } }
+  @media (min-width: 520px) { .doc-item-sub { display: none; } .doc-table { font-size: 14px; } .doc-table td { padding-block: 14px; } .doc-table th, .doc-table td { padding-inline: 10px; } .doc-table .c-no { padding-inline-start: 0; } .doc-table .c-amt { padding-inline-end: 0; } }
+
+  /* Totals */
+  .doc-totals { justify-self: end; inline-size: 100%; max-inline-size: 20rem; display: grid; gap: 8px; font-size: 14px; }
+  .doc-totals > div { display: flex; justify-content: space-between; gap: 12px; padding-block-end: 8px; border-block-end: 1px solid var(--hairline); }
+  .doc-totals > div > span:last-child { font-weight: 600; }
+  .doc-totals .doc-grand { padding-block: 10px 0; border-block-end: 0; border-block-start: 3px double var(--rule-strong); font-family: var(--ff-heading); font-size: 19px; font-weight: 800; }
+  .doc-totals .doc-grand > span:last-child { font-weight: 800; }
+
+  /* Perforation: dotted divider like the reference */
+  .doc-perf { margin: 0; border: 0; block-size: 4px; background: radial-gradient(circle, var(--muted) 1.2px, transparent 1.5px) 0 50% / 12px 4px repeat-x; opacity: 0.7; }
+
+  .doc-foot { display: grid; gap: 12px; font-size: 13px; color: var(--muted); }
+  .doc-foot strong, .doc-foot-title { color: var(--text); font-weight: 650; }
+  .doc-pre { white-space: pre-wrap; }
+
+  /* Print / Save as PDF from the browser: clean black-on-white page */
+  @media print {
+    .doc { border: 0; box-shadow: none; padding: 0; background: white; color: black; --doc-pad: 0px; }
+    .doc * { color: black !important; border-color: #888 !important; }
+    .doc-status { background: white !important; transform: none; }
+    .doc-table .c-price, .doc-table .c-tax { display: table-cell; }
+    .doc-item-sub { display: none; }
+    .doc-table-wrap { overflow: visible; }
+    .doc-parties, .doc-totals, .doc-table tr { break-inside: avoid; }
+  }
+}

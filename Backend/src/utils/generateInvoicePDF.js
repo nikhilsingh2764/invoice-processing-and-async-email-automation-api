@@ -1,12 +1,19 @@
 import PDFDocument from "pdfkit";
 import generateInvoiceTemplate from "../templates/invoice.template.js";
 
-const generateInvoicePDF = (invoice) => {
-    // margin 36 matches the template's layout constants
+/**
+ * Builds the invoice PDF and resolves with a Buffer.
+ * Theme: "dark" (default, matches the app) or "light" (print-friendly). Set INVOICE_PDF_THEME=light to switch.
+ */
+const generateInvoicePDF = (invoice, options = {}) => {
+    const theme = options.theme || process.env.INVOICE_PDF_THEME || "dark";
+
+    // The template lays everything out itself, so margins are 0 and pages are buffered for "Page x of y".
     const doc = new PDFDocument({
         size: "A4",
-        margin: 36,
+        margin: 0,
         autoFirstPage: true,
+        bufferPages: true,
         info: { Title: `Invoice ${invoice?.invoiceNumber || ""}` },
     });
 
@@ -18,7 +25,7 @@ const generateInvoicePDF = (invoice) => {
         doc.on("error", reject);
 
         try {
-            generateInvoiceTemplate(doc, invoice);
+            generateInvoiceTemplate(doc, invoice, { ...options, theme });
             doc.end();
         } catch (err) {
             reject(err);

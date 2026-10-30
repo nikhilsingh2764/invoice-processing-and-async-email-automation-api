@@ -1,331 +1,386 @@
-import PDFDocument from "pdfkit";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 /**
- * Renders a professional, single-page A4 invoice matching your exact app layout.
+ * Invoice PDF layout (A4). Mirrors the on-screen invoice card:
+ *   header (business + status stamp) -> meta strip -> From / Bill to -> items table
+ *   -> totals -> dotted divider -> payment method, notes, terms.
  *
- * Usage:
- *   const doc = new PDFDocument({ size: "A4", margin: 36 });
- *   generateInvoiceTemplate(doc, invoice);
- *   doc.end();
+ * - Dark "card" look by default (matches the app); pass { theme: "light" } for a print-friendly version.
+ * - Embeds DejaVu Sans Condensed so the rupee sign (and other currency symbols) render correctly.
+ *   The built-in Helvetica font cannot draw "₹".
+ * - Flows onto extra pages when there are many items; nothing is ever cut off.
  */
-const generateInvoiceTemplate = (doc, invoice = {}) => {
-    // =====================================================
-    // CONSTANTS & SETUP
-    // =====================================================
-    const currency = "₹";
-    const pageWidth = 595.28;
-    const pageHeight = 841.89;
-    const margin = 36;
-    const left = margin;
-    const right = pageWidth - margin;
-    const contentWidth = pageWidth - margin * 2; // 523.28
 
-    const color = {
-        primary: "#0F172A",     // Dark slate text
-        accent: "#16A34A",      // Green accent / status
-        accentBg: "#DCFCE7",    // Soft green background
-        text: "#1E293B",
-        muted: "#64748B",       // Labels
-        border: "#E2E8F0",      // Light divider lines
-        zebra: "#F8FAFC",
-        white: "#FFFFFF",
+const FONT_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "assets", "fonts");
+const FONT_REGULAR = path.join(FONT_DIR, "DejaVuSansCondensed.ttf");
+const FONT_BOLD = path.join(FONT_DIR, "DejaVuSansCondensed-Bold.ttf");
+
+const THEMES = {
+    dark: {
+        page: "#0F0E0D",
+        card: "#181614",
+        border: "#2B2723",
+        rule: "#2B2723",
+        ink: "#F5EFE9",
+        muted: "#A99D93",
+        accentText: "#E9A56B", // contact + address lines
+        owner: "#AFA8E8",
+        dots: "#6F655D",
+        status: {
+            Paid: { bg: "#14301F", fg: "#86EFAC" },
+            Pending: { bg: "#3A2A0A", fg: "#FCD34D" },
+            Overdue: { bg: "#3F1414", fg: "#FCA5A5" },
+            "Partially Paid": { bg: "#14264A", fg: "#93C5FD" },
+            Draft: { bg: "#2B2926", fg: "#D6D3D1" },
+            Cancelled: { bg: "#3A1440", fg: "#F0ABFC" },
+            Sent: { bg: "#14264A", fg: "#93C5FD" },
+        },
+    },
+    light: {
+        page: "#FFFFFF",
+        card: "#FFFFFF",
+        border: "#E2E8F0",
+        rule: "#E2E8F0",
+        ink: "#0F172A",
+        muted: "#64748B",
+        accentText: "#B45309",
+        owner: "#4F46E5",
+        dots: "#94A3B8",
+        status: {
+            Paid: { bg: "#DCFCE7", fg: "#166534" },
+            Pending: { bg: "#FEF3C7", fg: "#92400E" },
+            Overdue: { bg: "#FEE2E2", fg: "#B91C1C" },
+            "Partially Paid": { bg: "#DBEAFE", fg: "#1D4ED8" },
+            Draft: { bg: "#E7E5E4", fg: "#44403C" },
+            Cancelled: { bg: "#FAE8FF", fg: "#86198F" },
+            Sent: { bg: "#DBEAFE", fg: "#1D4ED8" },
+        },
+    },
+};
+
+const CURRENCY_SYMBOLS = { INR: "₹", USD: "$", EUR: "€", GBP: "£", AUD: "A$", CAD: "C$", AED: "AED ", JPY: "¥" };
+
+const num = (v) => {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : 0;
+};
+
+const generateInvoiceTemplate = (doc, invoice = {}, options = {}) => {
+    const C = THEMES[options.theme] || THEMES.dark;
+    const timeZone = options.timeZone || process.env.INVOICE_TIMEZONE || "Asia/Kolkata";
+
+    // ---------- Page geometry ----------
+    const W = 595.28;
+    const H = 841.89;
+    const OUTER = 24; // gap between paper edge and card
+    const PAD = 30; // card inner padding
+    const cardX = OUTER;
+    const cardW = W - OUTER * 2;
+    const left = cardX + PAD;
+    const contentW = cardW - PAD * 2;
+    const right = left + contentW;
+    const top = OUTER + PAD;
+    const bottom = H - OUTER - PAD - 12; // keep room for the small page footer
+
+    const biz = invoice.business || {};
+    const cust = invoice.customer || {};
+    const items = Array.isArray(invoice.items) ? invoice.items : [];
+    const currencyCode = String(biz.currency || invoice.currency || "INR").toUpperCase();
+    const symbol = CURRENCY_SYMBOLS[currencyCode] ?? `${currencyCode} `;
+
+    // ---------- Helpers ----------
+    const money = (v) =>
+        `${symbol}${num(v).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+    const formatDate = (d) => {
+        if (!d) return "-";
+        const date = new Date(d);
+        if (Number.isNaN(date.getTime())) return "-";
+        return new Intl.DateTimeFormat("en-US", { month: "short", day: "2-digit", year: "numeric", timeZone }).format(date);
     };
 
-    const statusColors = {
-        PAID: { bg: "#DCFCE7", fg: "#15803D" },
-        PENDING: { bg: "#FEF3C7", fg: "#B45309" },
-        DRAFT: { bg: "#F1F5F9", fg: "#475569" },
-        OVERDUE: { bg: "#FEE2E2", fg: "#B91C1C" },
+    const addressLines = (a) => {
+        if (!a) return [];
+        if (typeof a === "string") return a.split("\n").map((l) => l.trim()).filter(Boolean);
+        return [a.addressLine1, a.addressLine2, [a.city, a.state, a.postalCode].filter(Boolean).join(", "), a.country].filter(Boolean);
     };
 
-    const footerY = pageHeight - 45;
+    const setFont = (bold, size, color) => doc.font(bold ? "Bold" : "Regular").fontSize(size).fillColor(color);
 
-    // =====================================================
-    // HELPERS
-    // =====================================================
-    const formatDate = (date) => {
-        if (!date) return "-";
-        const d = new Date(date);
-        return Number.isNaN(d.getTime())
-            ? "-"
-            : d.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+    /** Single line of text, clipped with an ellipsis instead of wrapping or overflowing. */
+    const line = (str, x, y, w, { bold = false, size = 9, color = C.ink, align = "left" } = {}) => {
+        setFont(bold, size, color);
+        doc.text(String(str ?? ""), x, y, { width: w, align, lineBreak: false, ellipsis: true, height: size * 1.4 });
     };
 
-    const toNumber = (val) => {
-        const n = Number(val);
-        return Number.isFinite(n) ? n : 0;
+    /** Wrapped block; returns its height. */
+    const block = (str, x, y, w, { bold = false, size = 9, color = C.ink, lineGap = 1.5, align = "left" } = {}) => {
+        setFont(bold, size, color);
+        const h = doc.heightOfString(String(str), { width: w, lineGap });
+        doc.text(String(str), x, y, { width: w, lineGap, align });
+        return h;
     };
 
-    const formatMoney = (amount) =>
-        `${currency}${toNumber(amount).toLocaleString("en-IN", {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-        })}`;
-
-    const renderAddress = (addr) => {
-        if (!addr) return "";
-        if (typeof addr === "string") return addr.trim();
-        if (typeof addr !== "object") return "";
-        return [
-            addr.addressLine1,
-            addr.addressLine2,
-            [addr.city, addr.state, addr.postalCode].filter(Boolean).join(", "),
-            addr.country,
-        ]
-            .filter(Boolean)
-            .join("\n");
+    const heightOf = (str, w, size, bold = false, lineGap = 1.5) => {
+        setFont(bold, size, "#000");
+        return doc.heightOfString(String(str), { width: w, lineGap });
     };
 
-    const line = (val, x, y, width, { font = "Helvetica", size = 8, fill = color.text, align = "left" } = {}) => {
-        doc.font(font).fontSize(size).fillColor(fill);
-        doc.text(String(val ?? ""), x, y, { width, align, lineBreak: false });
+    const hRule = (y, x1 = left, x2 = right, color = C.rule, weight = 0.6) =>
+        doc.save().moveTo(x1, y).lineTo(x2, y).lineWidth(weight).strokeColor(color).stroke().restore();
+
+    const dots = (y) => {
+        doc.save().fillColor(C.dots);
+        for (let x = left + 2; x < right; x += 9) doc.circle(x, y, 0.9).fill();
+        doc.restore();
     };
 
-    const hRule = (y, weight = 0.5, stroke = color.border, x1 = left, x2 = right) => {
-        doc.moveTo(x1, y).lineTo(x2, y).lineWidth(weight).strokeColor(stroke).stroke();
+    // ---------- Pages ----------
+    let pageNo = 0;
+    const paintPage = () => {
+        pageNo += 1;
+        doc.save();
+        doc.rect(0, 0, W, H).fill(C.page);
+        doc.roundedRect(cardX, OUTER, cardW, H - OUTER * 2, 14).lineWidth(0.8).fillAndStroke(C.card, C.border);
+        doc.restore();
+    };
+    const nextPage = () => {
+        doc.addPage({ size: "A4", margin: 0 });
+        paintPage();
+        return top;
     };
 
-    // =====================================================
-    // RENDERING SECTIONS
-    // =====================================================
+    // ---------- Sections ----------
+    const drawHeader = (y) => {
+        const status = String(invoice.status || "Pending");
+        const sc = C.status[status] || C.status.Pending;
 
-    // 1. Top Header & Status Badge
-    const drawHeader = () => {
-        const top = margin;
-        const biz = invoice.business || {};
-        const bizName = biz.businessName || "Business Name";
+        // Status stamp (top right, slightly rotated like the app)
+        const label = status.toUpperCase();
+        setFont(true, 8.5, sc.fg);
+        const tw = doc.widthOfString(label, { characterSpacing: 1 });
+        const pw = tw + 22;
+        const ph = 21;
+        const px = right - pw - 2;
+        const py = y + 2;
+        doc.save();
+        doc.rotate(-3, { origin: [px + pw / 2, py + ph / 2] });
+        doc.roundedRect(px, py, pw, ph, 4).lineWidth(1.3).fillAndStroke(sc.bg, sc.fg);
+        setFont(true, 8.5, sc.fg);
+        doc.text(label, px, py + 6.3, { width: pw, align: "center", characterSpacing: 1, lineBreak: false });
+        doc.restore();
 
-        // Business Name & Subtitle
-        line(bizName, left, top, 350, { font: "Helvetica-Bold", size: 16, fill: color.primary });
-        if (biz.ownerName || biz.subtitle) {
-            line(biz.ownerName || biz.subtitle, left, top + 18, 350, { size: 9, fill: color.muted });
-        }
-
-        // Status Badge (Top Right)
-        const status = String(invoice.status || "PENDING").toUpperCase();
-        const sc = statusColors[status] || { bg: color.accentBg, fg: color.accent };
-        const pw = 64, ph = 18;
-        const px = right - pw, py = top;
-
-        doc.roundedRect(px, py, pw, ph, 4).fill(sc.bg);
-        line(status, px, py + 5, pw, {
-            font: "Helvetica-Bold",
-            size: 8,
-            fill: sc.fg,
-            align: "center",
-        });
-
-        return top + 36;
+        const nameW = contentW - pw - 20;
+        line(biz.businessName || "Your business", left, y, nameW, { bold: true, size: 20, color: C.ink });
+        if (biz.ownerName) line(biz.ownerName, left, y + 27, nameW, { size: 9.5, color: C.owner });
+        return y + (biz.ownerName ? 50 : 38);
     };
 
-    // 2. Four Stat / Meta Boxes (Invoice no., Issued, Due, Total)
-    const drawMetaCards = (y) => {
-        const itemsCount = invoice.items || [];
-        const computedSub = itemsCount.reduce((s, it) => s + toNumber(it?.quantity) * toNumber(it?.price), 0);
-        const grand = toNumber(invoice.grandTotal ?? computedSub + toNumber(invoice.totalTax) - toNumber(invoice.totalDiscount));
-
-        const cards = [
-            { label: "Invoice no.", value: invoice.invoiceNumber || "-" },
-            { label: "Issued", value: formatDate(invoice.invoiceDate) },
-            { label: "Due", value: formatDate(invoice.dueDate) },
-            { label: "Total", value: formatMoney(grand) },
+    const drawMeta = (y) => {
+        const cells = [
+            ["Invoice no.", invoice.invoiceNumber || "-"],
+            ["Issued", formatDate(invoice.invoiceDate)],
+            ["Due", formatDate(invoice.dueDate)],
+            ["Total", money(invoice.grandTotal)],
         ];
-
-        const cardW = contentWidth / 4;
-        let cx = left;
-
-        cards.forEach((card, idx) => {
-            // Optional subtle background box for cards
-            doc.roundedRect(cx, y, cardW - 8, 36, 4).fill(color.zebra);
-            
-            line(card.label.toUpperCase(), cx + 8, y + 6, cardW - 24, { font: "Helvetica", size: 6.5, fill: color.muted });
-            line(card.value, cx + 8, y + 17, cardW - 24, { font: "Helvetica-Bold", size: 9.5, fill: color.primary });
-
-            cx += cardW;
+        const cw = contentW / 4;
+        const h = 50;
+        hRule(y);
+        hRule(y + h);
+        cells.forEach(([label, value], i) => {
+            const x = left + cw * i;
+            const inset = i === 0 ? 0 : 12;
+            if (i > 0) doc.save().moveTo(x, y + 9).lineTo(x, y + h - 9).lineWidth(0.6).strokeColor(C.rule).stroke().restore();
+            line(label, x + inset, y + 10, cw - inset - 6, { size: 7.5, color: C.muted });
+            line(value, x + inset, y + 24, cw - inset - 6, { bold: true, size: i === 3 ? 13.5 : 12, color: C.ink });
         });
-
-        return y + 46;
+        return y + h;
     };
 
-    // 3. From & Bill To Side-by-Side Section
     const drawParties = (y) => {
-        const biz = invoice.business || {};
-        const cust = invoice.customer || {};
-        const colW = contentWidth / 2 - 10;
-
-        // FROM Section
-        let fy = y;
-        line("From", left, fy, colW, { font: "Helvetica-Bold", size: 8, fill: color.muted });
-        fy += 12;
-        line(biz.businessName || "Business", left, fy, colW, { font: "Helvetica-Bold", size: 10, fill: color.primary });
-        fy += 14;
-
-        const fromDetails = [
-            biz.email,
-            biz.phone,
-            biz.gstin ? `GSTIN: ${biz.gstin}` : null,
-            renderAddress(biz.address),
-        ].filter(Boolean);
-
-        fromDetails.forEach((text) => {
-            doc.font("Helvetica").fontSize(8).fillColor(color.muted);
-            doc.text(text, left, fy, { width: colW, lineGap: 1 });
-            fy += doc.heightOfString(text, { width: colW }) + 2;
-        });
-
-        // BILL TO Section
-        const rx = left + contentWidth / 2 + 10;
-        let ry = y;
-        line("Bill to", rx, ry, colW, { font: "Helvetica-Bold", size: 8, fill: color.muted });
-        ry += 12;
-        line(cust.customerName || cust.name || "Customer Name", rx, ry, colW, { font: "Helvetica-Bold", size: 10, fill: color.primary });
-        ry += 14;
-
-        const billDetails = [
-            cust.companyName || cust.company,
-            cust.email,
-            cust.phone,
-            cust.gstin ? `GSTIN: ${cust.gstin}` : null,
-            renderAddress(cust.address),
-        ].filter(Boolean);
-
-        billDetails.forEach((text) => {
-            doc.font("Helvetica").fontSize(8).fillColor(color.muted);
-            doc.text(text, rx, ry, { width: colW, lineGap: 1 });
-            ry += doc.heightOfString(text, { width: colW }) + 2;
-        });
-
-        return Math.max(fy, ry) + 16;
-    };
-
-    // 4. Items Table
-    const drawTable = (startY, endY) => {
-        const cols = {
-            no: { x: left + 6, w: 20, align: "left" },
-            item: { x: left + 35, w: 215, align: "left" },
-            qty: { x: left + 255, w: 60, align: "right" },
-            price: { x: left + 325, w: 65, align: "right" },
-            tax: { x: left + 400, w: 45, align: "right" },
-            amount: { x: left + 455, w: 68, align: "right" },
-        };
-
-        // Table Header Line
-        hRule(startY, 0.6, color.border);
-        const headerY = startY + 6;
-
-        [
-            ["no", "Item"],
-            ["qty", "Qty"],
-            ["price", "Price"],
-            ["tax", "Tax"],
-            ["amount", "Amount"],
-        ].forEach(([key, label]) => {
-            line(label, cols[key].x, headerY, cols[key].w, {
-                font: "Helvetica-Bold",
-                size: 7.5,
-                fill: color.muted,
-                align: cols[key].align,
+        const gap = 28;
+        const colW = (contentW - gap) / 2;
+        const draw = (title, name, details, x) => {
+            let cy = y;
+            line(title, x, cy, colW, { size: 7.5, color: C.muted });
+            cy += 14;
+            const nh = block(name || "-", x, cy, colW, { bold: true, size: 12.5, color: C.ink, lineGap: 0 });
+            cy += nh + 5;
+            details.forEach((d) => {
+                cy += block(d, x, cy, colW, { size: 8.5, color: C.accentText, lineGap: 0.5 }) + 2.5;
             });
-        });
+            return cy;
+        };
+        const fromY = draw(
+            "From",
+            biz.businessName,
+            [biz.email, biz.phone, biz.gstNumber && `GST ${biz.gstNumber}`, ...addressLines(biz.address)].filter(Boolean),
+            left,
+        );
+        const toY = draw(
+            "Bill to",
+            cust.customerName || cust.name,
+            [cust.companyName, cust.email, cust.phone, cust.gstNumber && `GST ${cust.gstNumber}`, ...addressLines(cust.billingAddress || cust.address)].filter(Boolean),
+            left + colW + gap,
+        );
+        return Math.max(fromY, toY);
+    };
 
-        hRule(headerY + 14, 0.6, color.border);
+    // Table columns
+    const col = {
+        no: { x: left, w: 20 },
+        qty: { w: 66 },
+        price: { w: 68 },
+        tax: { w: 40 },
+        amt: { w: 78 },
+    };
+    col.amt.x = right - col.amt.w;
+    col.tax.x = col.amt.x - col.tax.w;
+    col.price.x = col.tax.x - col.price.w;
+    col.qty.x = col.price.x - col.qty.w;
+    col.item = { x: left + col.no.w, w: col.qty.x - (left + col.no.w) - 8 };
 
-        // Table Rows
-        let cy = headerY + 20;
-        const rowHeight = 26;
-        const items = Array.isArray(invoice.items) ? invoice.items : [];
-        const maxRows = Math.floor((endY - cy) / rowHeight);
-        const visibleItems = items.slice(0, maxRows);
+    const drawTableHead = (y) => {
+        hRule(y);
+        const ty = y + 10;
+        line("Item", col.item.x, ty, col.item.w, { size: 8, color: C.muted });
+        line("Qty", col.qty.x, ty, col.qty.w, { size: 8, color: C.muted, align: "right" });
+        line("Price", col.price.x, ty, col.price.w, { size: 8, color: C.muted, align: "right" });
+        line("Tax", col.tax.x, ty, col.tax.w, { size: 8, color: C.muted, align: "right" });
+        line("Amount", col.amt.x, ty, col.amt.w, { size: 8, color: C.muted, align: "right" });
+        hRule(y + 28);
+        return y + 28;
+    };
 
-        visibleItems.forEach((item, idx) => {
-            const qty = toNumber(item?.quantity);
-            const price = toNumber(item?.price);
-            const itemTax = item?.tax ? `${toNumber(item.tax)}%` : "0%";
-            const total = qty * price;
-            const itemName = item?.name || item?.itemName || item?.productName || "Item";
-            const itemDesc = item?.description || "";
+    const rowMetrics = (it) => {
+        const name = it.productName || it.name || it.itemName || "Item";
+        const desc = it.description || "";
+        const nh = heightOf(name, col.item.w, 9.5, true, 0);
+        const dh = desc ? heightOf(desc, col.item.w, 8, false, 0) + 2 : 0;
+        return { name, desc, nh, dh, h: Math.max(38, 24 + nh + dh) };
+    };
 
-            line(idx + 1, cols.no.x, cy + 4, cols.no.w, { size: 8, fill: color.muted });
-            
-            // Item Name & Sub-description
-            line(itemName, cols.item.x, cy + 3, cols.item.w, { font: "Helvetica-Bold", size: 8.5, fill: color.primary });
-            if (itemDesc) {
-                line(itemDesc, cols.item.x, cy + 13, cols.item.w, { size: 7, fill: color.muted });
-            }
+    const drawRow = (it, i, y, m) => {
+        const qty = num(it.quantity);
+        const price = num(it.price);
+        const rate = num(it.taxRate ?? it.tax);
+        const amount = it.lineTotal != null ? num(it.lineTotal) : qty * price;
+        const ry = y + 13;
+        line(i + 1, col.no.x, ry, col.no.w, { size: 8.5, color: C.muted });
+        block(m.name, col.item.x, ry, col.item.w, { bold: true, size: 9.5, color: C.ink, lineGap: 0 });
+        if (m.desc) block(m.desc, col.item.x, ry + m.nh + 2, col.item.w, { size: 8, color: C.muted, lineGap: 0 });
+        line(`${qty}${it.unit ? ` ${it.unit}` : ""}`, col.qty.x, ry, col.qty.w, { size: 9, color: C.ink, align: "right" });
+        line(money(price), col.price.x, ry, col.price.w, { size: 9, color: C.ink, align: "right" });
+        line(`${rate}%`, col.tax.x, ry, col.tax.w, { size: 9, color: C.ink, align: "right" });
+        line(money(amount), col.amt.x, ry, col.amt.w, { bold: true, size: 9.5, color: C.ink, align: "right" });
+        hRule(y + m.h, left, right, C.rule, 0.5);
+    };
 
-            line(`${qty} ${item?.unit || "piece"}`, cols.qty.x, cy + 6, cols.qty.w, { size: 8, fill: color.text, align: "right" });
-            line(formatMoney(price), cols.price.x, cy + 6, cols.price.w, { size: 8, fill: color.text, align: "right" });
-            line(itemTax, cols.tax.x, cy + 6, cols.tax.w, { size: 8, fill: color.text, align: "right" });
-            line(formatMoney(total), cols.amount.x, cy + 6, cols.amount.w, { font: "Helvetica-Bold", size: 8, fill: color.primary, align: "right" });
+    const drawTotals = (y) => {
+        const subTotal = invoice.subTotal ?? items.reduce((s, it) => s + num(it.quantity) * num(it.price), 0);
+        const discount = num(invoice.totalDiscount);
+        const tax = num(invoice.totalTax);
+        const grand = invoice.grandTotal ?? num(subTotal) - discount + tax;
 
-            cy += rowHeight;
-            hRule(cy - 4, 0.4, color.border);
+        const w = 230;
+        const x = right - w;
+        let cy = y;
+        const row = (label, value) => {
+            line(label, x, cy, w / 2, { size: 9.5, color: C.ink });
+            line(value, x + w / 2, cy, w / 2, { bold: true, size: 9.5, color: C.ink, align: "right" });
+            cy += 15;
+            hRule(cy - 5, x, right, C.rule, 0.5);
+            cy += 4;
+        };
+        row("Subtotal", money(subTotal));
+        if (discount > 0) row("Discount", `−${money(discount)}`);
+        row("Tax", money(tax));
+        // double rule, like the app
+        hRule(cy - 2, x, right, C.ink, 0.9);
+        hRule(cy + 1, x, right, C.ink, 0.9);
+        cy += 10;
+        line("Total", x, cy, w / 2, { bold: true, size: 14, color: C.ink });
+        line(money(grand), x + w / 2, cy, w / 2, { bold: true, size: 14, color: C.ink, align: "right" });
+        return cy + 28;
+    };
+
+    const totalsHeight = 30 + 19 * (2 + (num(invoice.totalDiscount) > 0 ? 1 : 0)) + 40;
+
+    const drawFooterNotes = (startY) => {
+        let y = startY;
+        const need = (h) => {
+            if (y + h > bottom) y = nextPage();
+        };
+        need(30);
+        dots(y);
+        y += 16;
+        if (invoice.paymentMethod) {
+            setFont(true, 9, C.ink);
+            const label = "Payment method: ";
+            const lw = doc.widthOfString(label);
+            line(label, left, y, lw + 4, { bold: true, size: 9, color: C.ink });
+            line(invoice.paymentMethod, left + lw, y, contentW - lw, { size: 9, color: C.muted });
+            y += 20;
+        }
+        [
+            ["Notes", invoice.notes],
+            ["Terms and conditions", invoice.termsAndConditions],
+        ].forEach(([title, text]) => {
+            if (!text) return;
+            const h = heightOf(text, contentW, 8.5, false, 1.5);
+            need(16 + Math.min(h, 60));
+            line(title, left, y, contentW, { bold: true, size: 9, color: C.ink });
+            y += 14;
+            // a very long block may span pages: print it paragraph by paragraph
+            String(text).split("\n").forEach((para) => {
+                const ph = heightOf(para || " ", contentW, 8.5, false, 1.5);
+                need(ph);
+                block(para || " ", left, y, contentW, { size: 8.5, color: C.muted, lineGap: 1.5 });
+                y += ph + 2;
+            });
+            y += 8;
         });
     };
 
-    // 5. Totals & Payment Method Footer Section
-    const drawBottomSection = (y) => {
-        const summaryW = 220;
-        const summaryX = right - summaryW;
+    // ---------- Execute ----------
+    doc.registerFont("Regular", FONT_REGULAR);
+    doc.registerFont("Bold", FONT_BOLD);
+    doc.info.Title = `Invoice ${invoice.invoiceNumber || ""}`.trim();
+    doc.info.Author = biz.businessName || "InvoicePilot";
 
-        const items = Array.isArray(invoice.items) ? invoice.items : [];
-        const computedSub = items.reduce((acc, it) => acc + toNumber(it?.quantity) * toNumber(it?.price), 0);
-        const sub = toNumber(invoice.subTotal ?? computedSub);
-        const tax = toNumber(invoice.totalTax);
-        const grand = toNumber(invoice.grandTotal ?? sub + tax);
+    // Layout is fully manual: no automatic margins, so PDFKit never adds stray pages.
+    doc.page.margins = { top: 0, bottom: 0, left: 0, right: 0 };
+    paintPage();
 
-        let sy = y;
-        const totals = [
-            ["Subtotal", formatMoney(sub)],
-            ["Tax", formatMoney(tax)],
-        ];
+    let y = drawHeader(top);
+    y = drawMeta(y + 8);
+    y = drawParties(y + 22) + 22;
 
-        totals.forEach(([lbl, val]) => {
-            line(lbl, summaryX, sy, 100, { size: 8, fill: color.muted });
-            line(val, summaryX + 100, sy, summaryW - 100, { font: "Helvetica-Bold", size: 8, fill: color.text, align: "right" });
-            sy += 14;
-        });
+    y = drawTableHead(y);
+    items.forEach((it, i) => {
+        const m = rowMetrics(it);
+        if (y + m.h > bottom) {
+            y = drawTableHead(nextPage());
+        }
+        drawRow(it, i, y, m);
+        y += m.h;
+    });
 
-        hRule(sy + 2, 0.6, color.border, summaryX, right);
-        sy += 8;
+    y += 14;
+    if (y + totalsHeight > bottom) y = nextPage();
+    y = drawTotals(y);
+    drawFooterNotes(y);
 
-        // Total row
-        line("Total", summaryX, sy, 100, { font: "Helvetica-Bold", size: 10, fill: color.primary });
-        line(formatMoney(grand), summaryX + 100, sy - 1, summaryW - 100, {
-            font: "Helvetica-Bold",
-            size: 11,
-            fill: color.primary,
-            align: "right",
-        });
-
-        // Payment Method (Bottom Left)
-        const payMethod = invoice.paymentMethod || "UPI";
-        line(`Payment method: ${payMethod}`, left, footerY - 20, 300, { font: "Helvetica-Bold", size: 8, fill: color.primary });
-
-        // Dotted Divider above footer
-        doc.dash(2, { space: 2 });
-        hRule(footerY - 8, 0.5, color.border);
-        doc.undash();
-    };
-
-    // =====================================================
-    // EXECUTION
-    // =====================================================
-    doc.info.Title = `Invoice - ${invoice.invoiceNumber || "Draft"}`;
-
-    const originalMarginBottom = doc.page.margins.bottom;
-    doc.page.margins.bottom = 0;
-
-    try {
-        const headerBottom = drawHeader();
-        const metaBottom = drawMetaCards(headerBottom + 10);
-        const partiesBottom = drawParties(metaBottom + 14);
-
-        const bottomSectionTop = footerY - 55;
-        drawTable(partiesBottom, bottomSectionTop - 15);
-        drawBottomSection(bottomSectionTop);
-    } finally {
-        doc.page.margins.bottom = originalMarginBottom;
+    // Page footer: invoice number + "Page x of y" (only when there is more than one page)
+    const range = doc.bufferedPageRange();
+    if (range.count > 1) {
+        for (let i = 0; i < range.count; i += 1) {
+            doc.switchToPage(range.start + i);
+            const fy = H - OUTER - PAD + 6;
+            line(invoice.invoiceNumber || "", left, fy, contentW / 2, { size: 7.5, color: C.muted });
+            line(`Page ${i + 1} of ${range.count}`, left + contentW / 2, fy, contentW / 2, { size: 7.5, color: C.muted, align: "right" });
+        }
     }
 };
 
